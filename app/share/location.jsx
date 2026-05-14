@@ -121,8 +121,7 @@ export default function LocationShareScreen() {
       });
 
       setRunning(true);
-      setSentCount(0);
-      setLast(null);
+      refresh();
       startPolling();
     } catch (failure) {
       setError(failure?.message ?? "Could not start sharing.");
