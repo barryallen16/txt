@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,26 +16,59 @@ import AppHeader from "../../components/AppHeader";
 import PixelIcon from "../../components/PixelIcon";
 import RecipientPicker from "../../components/RecipientPicker";
 import {
-  TARGET_BYTES,
+  COMPRESSION_PRESETS,
+  DEFAULT_PRESET,
   buildImageTransfer,
   compressToTarget,
   formatBytes,
+  getCompressionPreset,
+  partsForBytes,
 } from "../../lib/image";
 import { ensureSendPermission, sendParts } from "../../lib/sms";
 import { colors, radius, space, type } from "../../lib/theme";
 
 export default function ImageShareScreen() {
   const [recipient, setRecipient] = useState(null);
+  const [presetId, setPresetId] = useState(DEFAULT_PRESET);
+  const [source, setSource] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [working, setWorking] = useState(false);
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
+  const [progress, setProgress] = useState(null);
 
+  const compressionRun = useRef(0);
+  const preset = getCompressionPreset(presetId);
   const parts = useMemo(() => (photo ? buildImageTransfer(photo.base64) : null), [photo]);
+
+  const compress = async (uri, nextPreset) => {
+    const run = ++compressionRun.current;
+    setWorking(true);
+    setError(null);
+    setStatus(null);
+    setProgress(null);
+
+    try {
+      const compressed = await compressToTarget(uri, nextPreset);
+      if (run !== compressionRun.current) return;
+
+      const target = getCompressionPreset(nextPreset).target;
+      setPhoto(compressed);
+      setStatus(compressed.bytes <= target ? "compressed" : "compressed-heavy");
+    } catch (failure) {
+      if (run !== compressionRun.current) return;
+      setPhoto(null);
+      setStatus(null);
+      setError(failure?.message ?? "Could not read that picture.");
+    } finally {
+      if (run === compressionRun.current) setWorking(false);
+    }
+  };
 
   const pick = async () => {
     setError(null);
     setStatus(null);
+    setProgress(null);
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -44,20 +78,18 @@ export default function ImageShareScreen() {
       });
       if (result.canceled || !result.assets?.[0]?.uri) return;
 
-      setWorking(true);
-      setPhoto(null);
-      const compressed = await compressToTarget(result.assets[0].uri, TARGET_BYTES);
-      setPhoto(compressed);
-      setStatus(
-        compressed.bytes <= TARGET_BYTES
-          ? "compressed"
-          : "compressed-heavy",
-      );
+      setSource(result.assets[0].uri);
+      await compress(result.assets[0].uri, presetId);
     } catch (failure) {
       setError(failure?.message ?? "Could not read that picture.");
-    } finally {
-      setWorking(false);
     }
+  };
+
+  const selectPreset = (id) => {
+    if (working || id === presetId) return;
+    setPresetId(id);
+    setStatus(null);
+    if (source) compress(source, id);
   };
 
   const send = async () => {
@@ -65,6 +97,8 @@ export default function ImageShareScreen() {
 
     setWorking(true);
     setError(null);
+    setStatus(null);
+    setProgress({ current: 0, total: parts.parts.length });
 
     try {
       if (!(await ensureSendPermission())) {
@@ -72,16 +106,24 @@ export default function ImageShareScreen() {
         return;
       }
 
-      const result = await sendParts(recipient.number, parts.parts);
+      const result = await sendParts(
+        recipient.number,
+        parts.parts,
+        null,
+        ({ current, total }) => setProgress({ current, total }),
+      );
+
       if (result.sent) {
         setStatus("sent");
         setPhoto(null);
+        setSource(null);
       } else {
         setError(result.reason ?? "The message did not leave the phone.");
       }
     } catch (failure) {
       setError(failure?.message ?? "Sending failed.");
     } finally {
+      setProgress(null);
       setWorking(false);
     }
   };
@@ -90,6 +132,11 @@ export default function ImageShareScreen() {
     if (router.canGoBack()) router.back();
     else router.replace("/share");
   };
+
+  const sendingLabel =
+    progress && progress.current > 0
+      ? `Sending ${progress.current} of ${progress.total}`
+      : "Sending...";
 
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
@@ -121,11 +168,81 @@ export default function ImageShareScreen() {
           )}
         </View>
 
+        <View style={styles.block}>
+          <Text style={type.label}>QUALITY</Text>
+          <View style={styles.presets}>
+            {COMPRESSION_PRESETS.map((option) => {
+              const active = option.id === presetId;
+              return (
+                <Pressable
+                  key={option.id}
+                  onPress={() => selectPreset(option.id)}
+                  disabled={working}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active, disabled: working }}
+                  accessibilityLabel={`${option.label}: ${option.detail}`}
+                  style={({ pressed }) => [
+                    styles.preset,
+                    active && styles.presetActive,
+                    pressed && !active && styles.presetPressed,
+                    working && !active && styles.presetDisabled,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      type.button,
+                      styles.presetLabel,
+                      active && styles.presetLabelActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  <Text
+                    style={[
+                      type.muted,
+                      styles.presetDetail,
+                      active && styles.presetDetailActive,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {option.detail}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
         {photo ? (
           <View style={styles.facts}>
             <Fact label="SIZE" value={formatBytes(photo.bytes)} />
             <Fact label="PIXELS" value={`${photo.width} × ${photo.height}`} />
             <Fact label="SMS PARTS" value={String(photo.parts)} />
+          </View>
+        ) : null}
+
+        {progress ? (
+          <View style={styles.sending}>
+            <View style={styles.sendingTop}>
+              <Text style={type.label}>SENDING</Text>
+              <Text style={type.muted}>
+                {progress.current} of {progress.total} parts
+              </Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${
+                      progress.total > 0
+                        ? Math.round((progress.current / progress.total) * 100)
+                        : 0
+                    }%`,
+                  },
+                ]}
+              />
+            </View>
           </View>
         ) : null}
 
@@ -152,16 +269,16 @@ export default function ImageShareScreen() {
         />
 
         <Text style={[type.muted, styles.note]}>
-          Greyscale and posterising are done on the phone. A 3 MB photo usually
-          lands under {formatBytes(TARGET_BYTES)}, about{" "}
-          {Math.ceil(TARGET_BYTES / 100)} SMS parts.
+          Greyscale and posterising are done on the phone. {preset.label} aims
+          for {formatBytes(preset.target)}, about {partsForBytes(preset.target)}{" "}
+          SMS parts.
         </Text>
       </ScrollView>
 
       <View style={styles.footer}>
         {photo ? (
           <AppButton
-            label={working ? "Sending..." : `Send ${photo.parts} parts`}
+            label={working ? sendingLabel : `Send ${photo.parts} parts`}
             onPress={send}
             loading={working}
             disabled={!recipient?.number}
@@ -217,6 +334,44 @@ const styles = StyleSheet.create({
   center: {
     textAlign: "center",
   },
+  block: {
+    gap: space.sm,
+  },
+  presets: {
+    flexDirection: "row",
+    gap: space.sm,
+  },
+  preset: {
+    flex: 1,
+    gap: 2,
+    padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius,
+    backgroundColor: colors.panel,
+  },
+  presetActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent,
+  },
+  presetPressed: {
+    backgroundColor: colors.line,
+  },
+  presetDisabled: {
+    opacity: 0.5,
+  },
+  presetLabel: {
+    color: colors.text,
+  },
+  presetLabelActive: {
+    color: colors.accentInk,
+  },
+  presetDetail: {
+    fontSize: 11,
+  },
+  presetDetailActive: {
+    color: colors.accentInk,
+  },
   facts: {
     flexDirection: "row",
     gap: space.sm,
@@ -228,6 +383,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radius,
+  },
+  sending: {
+    gap: space.sm,
+    padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius,
+    backgroundColor: colors.panel,
+  },
+  sendingTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.md,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.line,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
+    backgroundColor: colors.accent,
   },
   warn: {
     color: colors.text,

@@ -45,6 +45,8 @@ class OffTxtSmsModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("OffTxtSms")
 
+    Events("onSendProgress")
+
     Function("hasSendPermission") {
       granted(Manifest.permission.SEND_SMS)
     }
@@ -94,8 +96,14 @@ class OffTxtSmsModule : Module() {
           }
 
           sent += segments.size
+          sendEvent(
+            "onSendProgress",
+            mapOf("current" to index + 1, "total" to parts.size)
+          )
           // The modem needs a moment between PDUs on some devices. Without
           // this a 25-part picture overruns the buffer and loses segments.
+          // SMSCs also throttle bursts, so about five SMS a second is a safe
+          // ceiling rather than the old 60 ms firehose.
           if (index < parts.lastIndex) Thread.sleep(PART_GAP_MS)
         }
       } catch (error: SecurityException) {
@@ -345,6 +353,6 @@ class OffTxtSmsModule : Module() {
 
   private companion object {
     const val SMS_SENT_ACTION = "expo.modules.offtxtsms.SMS_SENT"
-    const val PART_GAP_MS = 60L
+    const val PART_GAP_MS = 200L
   }
 }
