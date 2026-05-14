@@ -18,6 +18,7 @@ import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
 import { getMeta, setMeta } from "../lib/db";
 import {
+  DEFAULT_SNAPSHOT,
   getPermissionSnapshot,
   needsSetup,
   openAppSettings,
@@ -47,10 +48,14 @@ export default function PermissionsScreen() {
 
   const refresh = useCallback(async () => {
     setChecking(true);
+    setError(null);
     try {
       setSnapshot(await getPermissionSnapshot());
     } catch {
-      setError("Could not read the permission state.");
+      // The contract says this cannot throw, but never leave the screen on a
+      // spinner if a future native change breaks that promise.
+      setSnapshot({ ...DEFAULT_SNAPSHOT });
+      setError("Could not read the permission state. Try again.");
     } finally {
       setChecking(false);
     }
@@ -194,8 +199,24 @@ export default function PermissionsScreen() {
         }
       />
 
-      {snapshot == null ? (
+      {snapshot == null && checking ? (
         <Loading label="Checking permissions" style={styles.fill} />
+      ) : snapshot == null ? (
+        <View style={styles.errorState}>
+          <PixelIcon name="shield" size={24} color={colors.muted} />
+          <Text style={[type.body, styles.center]}>
+            Could not read the permission state.
+          </Text>
+          <Text style={[type.muted, styles.center]}>
+            Retry, or open Android settings and check access by hand.
+          </Text>
+          <AppButton label="Retry" onPress={refresh} />
+          <AppButton
+            label="Open settings"
+            variant="outline"
+            onPress={openAppSettings}
+          />
+        </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.intro}>
@@ -316,6 +337,13 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: "center",
+  },
+  errorState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.md,
+    padding: space.xl,
   },
   card: {
     gap: space.md,
