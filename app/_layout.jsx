@@ -101,9 +101,11 @@ export default function RootLayout() {
   // response can arrive before the navigator mounts on a cold start.
   useEffect(() => {
     const routeFor = (response) => {
-      const transferId =
-        response?.notification?.request?.content?.data?.transferId;
-      return transferId != null ? `/transfers/${transferId}` : "/sms-payments";
+      const data = response?.notification?.request?.content?.data;
+      if (data?.transferId != null) return `/transfers/${data.transferId}`;
+      // A "receiving" note points at the progress card in the inbox.
+      if (data?.transferKey) return "/transfers";
+      return "/sms-payments";
     };
 
     const queue = (response) => {
