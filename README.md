@@ -1,4 +1,4 @@
-# off-txt
+# txt
 
 Send pictures, QR codes, and live location over SMS. Works offline - no data plan needed on either end.
 
@@ -8,7 +8,7 @@ Send pictures, QR codes, and live location over SMS. Works offline - no data pla
   Amounts are written into the link as a clean UPI intent (`pa`, `pn`, `am`, `cu`, plus `tr`/`tn` when present).
   A signed link that already carries an amount is kept byte-for-byte so its signature stays valid.
   Links that need an amount added follow the [NPCI UPI linking specification](https://www.labnol.org/files/linking.pdf) and are unsigned, so the payer's UPI app may ask them to verify the source.
-- **Images**: Pick a photo, compress it to grayscale posterized JPEG (~2 KB), and send as a series of SMS parts. The other side reassembles it.
+- **Images**: Pick a photo, compress it to a grayscale posterized JPEG (1.2 KB by default), and send as a series of SMS parts. The other side reassembles it.
 - **QR codes**: Scan or paste any QR code text. Send the text over SMS; the recipient rebuilds the same QR code (metro tickets, boarding passes, etc.).
 - **Location**: Share your live location for a set interval. Updates arrive as SMS on the other side.
 
@@ -39,7 +39,7 @@ bun run typecheck
 - Expo SDK 54 / React Native 0.81
 - Bun 1.4+
 
-The native SMS module lives in `modules/off-txt-sms` and is linked via Expo autolinking. It requires a development build — Expo Go won't work.
+The native SMS module lives in `modules/off-txt-sms` and is linked via Expo autolinking. It requires a development build - Expo Go won't work.
 
 ## Architecture
 

@@ -1,28 +1,28 @@
 {
   "expo": {
-    "name": "off-txt",
-    "slug": "off-txt",
-    "scheme": "off-txt",
+    "name": "txt",
+    "slug": "txt",
+    "scheme": "txt",
     "experiments": {
       "typedRoutes": true
     },
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/off-txt-logo-dark.png",
+    "icon": "./assets/txt-s500.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/off-txt-logo-dark.png",
+      "image": "./assets/txt-s500.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0b0c10"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/off-txt-logo-dark.png",
-        "backgroundColor": "#0b0c10"
+        "foregroundImage": "./assets/txt-s500.png",
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.barryallen16.offtxt",

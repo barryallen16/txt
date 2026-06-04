@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -115,7 +116,7 @@ export default function PermissionsScreen() {
               icon: "bell",
               title: "Read incoming SMS",
               detail:
-                "Lets off-txt open pictures, codes and payment requests while the app is closed.",
+                "Lets txt open pictures, codes and payment requests while the app is closed.",
               granted: snapshot.notificationListener === "authorized",
               actionLabel: "Open settings",
               settingsLink: false,
@@ -138,7 +139,7 @@ export default function PermissionsScreen() {
           icon: "inbox",
           title: "Show new item alerts",
           detail:
-            "Android 13 and newer need this before off-txt can post a notification.",
+            "Android 13 and newer need this before txt can post a notification.",
           granted: snapshot.notifications,
           actionLabel: "Allow alerts",
           settingsLink: true,
@@ -220,9 +221,17 @@ export default function PermissionsScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.intro}>
-            <PixelIcon name="shield" size={24} color={colors.text} />
+            {firstRun ? (
+              <Image
+                source={require("../assets/txt-s500.png")}
+                style={styles.logo}
+                accessibilityLabel="txt"
+              />
+            ) : (
+              <PixelIcon name="shield" size={24} color={colors.text} />
+            )}
             <Text style={[type.heading, styles.center]}>
-              {firstRun ? "Set up off-txt" : "Permissions"}
+              {firstRun ? "Set up txt" : "Permissions"}
             </Text>
             <Text style={[type.muted, styles.center]}>
               {firstRun
@@ -293,7 +302,7 @@ export default function PermissionsScreen() {
 
       <View style={styles.footer}>
         <AppButton
-          label={firstRun ? "Start using off-txt" : "Done"}
+          label={firstRun ? "Start using txt" : "Done"}
           onPress={finish}
         />
         {firstRun ? (
@@ -334,6 +343,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.sm,
     paddingVertical: space.lg,
+  },
+  logo: {
+    width: 88,
+    height: 88,
+    borderRadius: space.md,
   },
   center: {
     textAlign: "center",

@@ -1,3 +1,3 @@
 - Skip the amount screen when the QR code already contains an amount
 - Send codes that render as meme templates or stickers on both sides, like emoji rendered from unicode
-- Add a counter in the top right showing SMS usage out of 100; assume all SMS goes through off-txt and reset at midnight
+- Add a counter in the top right showing SMS usage out of 100; assume all SMS goes through txt and reset at midnight

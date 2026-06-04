@@ -123,7 +123,7 @@ export default function ScannerScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
       <AppHeader
-        title="off-txt"
+        showLogo
         right={
           <View style={styles.headerActions}>
             <IconButton
