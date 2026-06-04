@@ -250,7 +250,6 @@ export default function SmsPaymentsScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
       <AppHeader
-        showLogo
         title="Requests"
         onBack={() => (router.canGoBack() ? router.back() : router.replace("/"))}
         right={

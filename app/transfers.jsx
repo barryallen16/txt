@@ -150,7 +150,6 @@ export default function TransfersScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
       <AppHeader
-        showLogo
         title="Shared items"
         onBack={goBack}
         right={

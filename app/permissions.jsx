@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   AppState,
   Image,
   Platform,
@@ -50,16 +51,22 @@ export default function PermissionsScreen() {
   const refresh = useCallback(async () => {
     setChecking(true);
     setError(null);
+    let next = null;
+
     try {
-      setSnapshot(await getPermissionSnapshot());
+      next = await getPermissionSnapshot();
+      setSnapshot(next);
     } catch {
       // The contract says this cannot throw, but never leave the screen on a
       // spinner if a future native change breaks that promise.
-      setSnapshot({ ...DEFAULT_SNAPSHOT });
+      next = { ...DEFAULT_SNAPSHOT };
+      setSnapshot(next);
       setError("Could not read the permission state. Try again.");
     } finally {
       setChecking(false);
     }
+
+    return next;
   }, []);
 
   useEffect(() => {
@@ -90,21 +97,41 @@ export default function PermissionsScreen() {
     setBusy(key);
     setError(null);
 
+    let granted = false;
+
     try {
       if (key === "notificationListener") {
         requestNotificationListenerAccess();
         return;
       }
-      if (key === "sms") await requestSmsAccess();
-      if (key === "notifications") await requestNotificationAccess();
-      if (key === "contacts") await requestContactsAccess();
-      if (key === "camera") await requestCameraAccess();
-      if (key === "location") await requestLocationAccess();
+      if (key === "sms") granted = await requestSmsAccess();
+      if (key === "notifications") granted = await requestNotificationAccess();
+      if (key === "contacts") granted = await requestContactsAccess();
+      if (key === "camera") granted = await requestCameraAccess();
+      if (key === "location") granted = await requestLocationAccess();
     } catch {
       setError("Android did not show that permission prompt. Open Settings.");
     } finally {
       setBusy(null);
-      await refresh();
+    }
+
+    const next = await refresh();
+    if (!next) return;
+
+    const stillOff =
+      key === "notificationListener"
+        ? next.notificationListener !== "authorized"
+        : !next[key];
+
+    if (!granted || stillOff) {
+      Alert.alert(
+        "Permission is still off",
+        "Android did not grant access. Turn it on in the app settings.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "Open settings", onPress: openAppSettings },
+        ],
+      );
     }
   };
 

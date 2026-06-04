@@ -18,12 +18,26 @@ export default function AppHeader({
   return (
     <View style={[styles.container, { paddingTop: insets.top + space.sm }]}>
       <View style={styles.bar}>
-        <View style={styles.side}>
-          {onBack ? (
-            <IconButton icon="arrow-left" label={backLabel} onPress={onBack} />
-          ) : null}
-        </View>
-        <View style={[styles.side, styles.right]}>
+        {onBack ? (
+          <IconButton icon="arrow-left" label={backLabel} onPress={onBack} />
+        ) : null}
+        {showLogo ? (
+          <View style={styles.brand}>
+            <TxtLogo width={32} height={24} accessibilityLabel="txt" />
+          </View>
+        ) : null}
+        {title ? (
+          <Text
+            style={[type.heading, styles.title]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            {title}
+          </Text>
+        ) : null}
+        <View style={styles.spacer} />
+        <View style={styles.right}>
           {right}
           {quota ? (
             <Text
@@ -36,16 +50,6 @@ export default function AppHeader({
               accessibilityLabel={`${quota.remaining} of ${quota.limit} SMS left today`}
             >
               {quota.used}/{quota.limit} SMS
-            </Text>
-          ) : null}
-        </View>
-        <View pointerEvents="none" style={styles.center}>
-          {showLogo ? (
-            <TxtLogo width={32} height={24} accessibilityLabel="txt" />
-          ) : null}
-          {title ? (
-            <Text style={[type.heading, styles.title]} numberOfLines={1}>
-              {title}
             </Text>
           ) : null}
         </View>
@@ -67,32 +71,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  side: {
-    flex: 1,
+  brand: {
     justifyContent: "center",
+    paddingHorizontal: space.xs,
+  },
+  title: {
+    flexShrink: 1,
+    marginLeft: space.sm,
+  },
+  spacer: {
+    flex: 1,
   },
   right: {
-    flex: 0,
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: space.xs,
-  },
-  center: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.sm,
-    paddingHorizontal: 48,
-  },
-  title: {
-    flexShrink: 1,
-    textAlign: "center",
+    marginLeft: space.xs,
   },
   quota: {
     fontSize: 10,
