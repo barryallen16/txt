@@ -1,18 +1,25 @@
 # txt
 
-Send pictures, QR codes, and live location over SMS. Works offline - no data plan needed on either end.
+Send pictures, QR codes and live location over SMS.
+It works offline, so neither phone needs a data plan.
 
 ## What it does
 
-- **Payments**: Scan a UPI QR code, enter an amount, and send the request via SMS. The recipient opens it in their UPI app.
-  Amounts are written into the link as a clean UPI intent (`pa`, `pn`, `am`, `cu`, plus `tr`/`tn` when present).
-  A signed link that already carries an amount is kept byte-for-byte so its signature stays valid.
+- Payments: scan a UPI QR code, enter an amount, and send the request by SMS.
+  The recipient opens it in their UPI app.
+  Amounts go into the link as UPI intent fields: `pa`, `pn`, `am`, `cu`, and `tr`/`tn` when present.
+  A signed link that already carries an amount is kept byte for byte so its signature stays valid.
   Links that need an amount added follow the [NPCI UPI linking specification](https://www.labnol.org/files/linking.pdf) and are unsigned, so the payer's UPI app may ask them to verify the source.
-- **Images**: Pick a photo, compress it to a grayscale posterized JPEG (1.2 KB by default), and send as a series of SMS parts. The other side reassembles it.
-- **QR codes**: Scan or paste any QR code text. Send the text over SMS; the recipient rebuilds the same QR code (metro tickets, boarding passes, etc.).
-- **Location**: Share your live location for a set interval. Updates arrive as SMS on the other side.
+- Images: pick a photo.
+  The app compresses it to a grayscale, posterized JPEG of about 1.2 KB and sends it as a series of SMS parts.
+  The other phone reassembles it.
+- QR codes: scan or paste any QR code text.
+  It goes over SMS, and the recipient rebuilds the same code: a metro ticket, a boarding pass or something else.
+- Location: share your live location for a set interval.
+  Each update arrives as an SMS.
 
-All transfers use a custom chunked protocol with CRC32 checksums and automatic reassembly. A native Android module handles silent `SEND_SMS` and inbox reading so multipart messages arrive whole.
+Every transfer uses a custom chunked protocol with CRC32 checksums and automatic reassembly.
+A native Android module handles silent `SEND_SMS` and inbox reading, so multipart messages arrive intact.
 
 ## Quick start
 
@@ -39,7 +46,8 @@ bun run typecheck
 - Expo SDK 54 / React Native 0.81
 - Bun 1.4+
 
-The native SMS module lives in `modules/off-txt-sms` and is linked via Expo autolinking. It requires a development build - Expo Go won't work.
+The native SMS module lives in `modules/off-txt-sms` and is linked via Expo autolinking.
+It needs a development build, so Expo Go won't work.
 
 ## Architecture
 
@@ -61,17 +69,19 @@ lib/                 # Pure logic, no React dependencies
 modules/off-txt-sms/ # Native Android module (Kotlin)
 ```
 
-## Key implementation details
+## Implementation details
 
-- **SMS protocol**: Each part is `ot1.<id>.<kind>.<seq>.<total>.<crc>.<chunk>` — all base36, fits in one GSM-7 segment (153 chars). Parts reassemble on the receiver.
-- **Image compression**: Grayscale + posterization + resize to target ~2 KB before splitting.
-- **Background listener**: Headless JS task intercepts SMS notifications, stores parts, and triggers reassembly when the app opens.
-- **Fonts**: Geist family (loaded via expo-font at runtime).
+- SMS protocol: each part is `ot1.<id>.<kind>.<seq>.<total>.<crc>.<chunk>`.
+  Every field is base36, and one part fits in a single GSM-7 segment (153 characters).
+  The receiver reassembles the parts.
+- Image compression: grayscale, posterization and resizing to about 1.2 KB, then the payload is split into parts.
+- Background listener: a Headless JS task reads SMS notifications, stores the parts and triggers reassembly when the app opens.
+- Fonts: Geist, loaded at runtime with expo-font.
 
 ## Testing
 
 ```bash
-bun test          # transfer + UPI tests
+bun test          # all tests
 bun run typecheck # TypeScript strict mode
 ```
 
