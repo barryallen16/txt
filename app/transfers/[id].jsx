@@ -1,17 +1,26 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
+  Alert,
   Image,
   Linking,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import * as FileSystem from "expo-file-system/legacy";
+import * as MediaLibrary from "expo-media-library";
 import { router, useLocalSearchParams } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 import AppButton from "../../components/AppButton";
 import AppHeader from "../../components/AppHeader";
+import IconButton from "../../components/IconButton";
 import PixelIcon from "../../components/PixelIcon";
 import { getTransfer, listTransfers } from "../../lib/db";
 import { formatAge, formatDistance } from "../../lib/geo";
@@ -23,6 +32,9 @@ import { KIND } from "../../lib/transfer";
 
 export default function TransferDetailScreen() {
   const { id } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const transfer = useMemo(
     () => getTransfer(Number(id)) ?? null,
     [id],
@@ -47,6 +59,47 @@ export default function TransferDetailScreen() {
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace("/transfers");
+  };
+
+  const savePicture = async () => {
+    if (!transfer?.payload_b64 || saving) return;
+
+    setSaving(true);
+
+    try {
+      const permission = await MediaLibrary.requestPermissionsAsync(true).catch(
+        () => null,
+      );
+
+      if (permission && permission.granted === false && !permission.canAskAgain) {
+        Alert.alert(
+          "Allow photo access",
+          "Turn on photo access in settings so txt can save the picture.",
+          [
+            { text: "Not now", style: "cancel" },
+            {
+              text: "Open settings",
+              onPress: () => Linking.openSettings().catch(() => {}),
+            },
+          ],
+        );
+        return;
+      }
+
+      const path = `${FileSystem.cacheDirectory}txt-${transfer.id}-${Date.now()}.jpg`;
+      await FileSystem.writeAsStringAsync(path, transfer.payload_b64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      await MediaLibrary.saveToLibraryAsync(path);
+      Alert.alert("Saved", "Picture saved to your gallery.");
+    } catch (failure) {
+      Alert.alert(
+        "Could not save the picture",
+        failure?.message ?? "Try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!transfer) {
@@ -85,12 +138,35 @@ export default function TransferDetailScreen() {
         </View>
 
         {transfer.kind === KIND.IMAGE && transfer.payload_b64 ? (
-          <View style={styles.imageBox}>
-            <Image
-              source={{ uri: `data:image/jpeg;base64,${transfer.payload_b64}` }}
-              style={styles.image}
-              resizeMode="contain"
-              accessibilityLabel="Received picture"
+          <View style={styles.imageBlock}>
+            <Pressable
+              onPress={() => setViewerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="View received picture full screen"
+              style={({ pressed }) => [
+                styles.imageBox,
+                pressed && styles.imagePressed,
+              ]}
+            >
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${transfer.payload_b64}` }}
+                style={styles.image}
+                resizeMode="contain"
+                accessibilityLabel="Received picture"
+              />
+              <View pointerEvents="none" style={styles.expandBadge}>
+                <PixelIcon name="expand" size={16} color={colors.text} />
+              </View>
+            </Pressable>
+
+            <Text style={type.muted}>Tap the picture to view it full screen.</Text>
+
+            <AppButton
+              label={saving ? "Saving..." : "Save to phone"}
+              icon="download"
+              variant="outline"
+              loading={saving}
+              onPress={savePicture}
             />
           </View>
         ) : null}
@@ -162,6 +238,58 @@ export default function TransferDetailScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      <Modal
+        visible={viewerOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setViewerOpen(false)}
+      >
+        <View
+          style={[
+            styles.viewer,
+            { paddingTop: insets.top, paddingBottom: insets.bottom },
+          ]}
+        >
+          <View style={styles.viewerBar}>
+            <Text style={type.label}>PICTURE</Text>
+            <IconButton
+              icon="close"
+              label="Close picture"
+              onPress={() => setViewerOpen(false)}
+            />
+          </View>
+
+          <Pressable
+            onPress={() => setViewerOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close picture"
+            style={styles.viewerBody}
+          >
+            {transfer.payload_b64 ? (
+              <Image
+                source={{
+                  uri: `data:image/jpeg;base64,${transfer.payload_b64}`,
+                }}
+                style={styles.viewerImage}
+                resizeMode="contain"
+                accessibilityLabel="Received picture full screen"
+              />
+            ) : null}
+          </Pressable>
+
+          <View style={styles.viewerFooter}>
+            <AppButton
+              label={saving ? "Saving..." : "Save to phone"}
+              icon="download"
+              variant="outline"
+              loading={saving}
+              onPress={savePicture}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -190,6 +318,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
+  imageBlock: {
+    gap: space.md,
+  },
   imageBox: {
     height: 280,
     borderWidth: 1,
@@ -198,8 +329,46 @@ const styles = StyleSheet.create({
     backgroundColor: colors.panel,
     overflow: "hidden",
   },
+  imagePressed: {
+    opacity: 0.85,
+  },
   image: {
     flex: 1,
+  },
+  expandBadge: {
+    position: "absolute",
+    top: space.sm,
+    right: space.sm,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius,
+    backgroundColor: "rgba(11, 12, 16, 0.8)",
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  viewer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.96)",
+  },
+  viewerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
+  viewerBody: {
+    flex: 1,
+    paddingHorizontal: space.md,
+  },
+  viewerImage: {
+    flex: 1,
+    width: "100%",
+  },
+  viewerFooter: {
+    padding: space.lg,
   },
   qrBlock: {
     alignItems: "center",
