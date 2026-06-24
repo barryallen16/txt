@@ -14,7 +14,7 @@ It works offline, so neither phone needs a data plan.
   The app compresses it to a grayscale, posterized JPEG of about 1.2 KB and sends it as a series of SMS parts.
   The other phone reassembles it.
 - QR codes: scan or paste any QR code text.
-  It goes over SMS, and the recipient rebuilds the same code: a metro ticket, a boarding pass or something else.
+  The text goes over SMS, and the recipient rebuilds the same code, whether it started as a metro ticket, a boarding pass or something else.
 - Location: share your live location for a set interval.
   Each update arrives as an SMS.
 
@@ -30,7 +30,7 @@ bun install
 # Start development server
 bun start
 
-# Run on Android (requires native build for SMS module)
+# Run on Android (requires a native build for the SMS module)
 bun android
 
 # Run tests
@@ -42,11 +42,11 @@ bun run typecheck
 
 ## Requirements
 
-- Android device with SMS permission (for sending/receiving)
+- Android device with SMS permission, for sending and receiving
 - Expo SDK 54 / React Native 0.81
 - Bun 1.4+
 
-The native SMS module lives in `modules/off-txt-sms` and is linked via Expo autolinking.
+The native SMS module lives in `modules/off-txt-sms` and is linked through Expo autolinking.
 It needs a development build, so Expo Go won't work.
 
 ## Architecture
@@ -72,11 +72,11 @@ modules/off-txt-sms/ # Native Android module (Kotlin)
 ## Implementation details
 
 - SMS protocol: each part is `ot1.<id>.<kind>.<seq>.<total>.<crc>.<chunk>`.
-  Every field is base36, and one part fits in a single GSM-7 segment (153 characters).
+  Every field is base36, and one part fits in a single GSM-7 segment of 153 characters.
   The receiver reassembles the parts.
 - Image compression: grayscale, posterization and resizing to about 1.2 KB, then the payload is split into parts.
 - Background listener: a Headless JS task reads SMS notifications, stores the parts and triggers reassembly when the app opens.
-- Fonts: Geist, loaded at runtime with expo-font.
+- Fonts: Saira for body text and Geist Pixel for display, both loaded at runtime with expo-font.
 
 ## Testing
 
