@@ -31,7 +31,7 @@ const TABS = [
   {
     key: "terms",
     label: "TERMS",
-    intro: "Rules for using txt. Last updated October 2026.",
+    intro: "Rules for using txt. Last updated June 2026.",
     sections: [
       {
         title: "What this is",
