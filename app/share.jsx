@@ -8,6 +8,12 @@ import { colors, radius, space, type } from "../lib/theme";
 const OPTIONS = [
   {
     icon: "location",
+    title: "Current location",
+    detail: "One pin, sent once. Nothing follows it.",
+    href: "/share/location-once",
+  },
+  {
+    icon: "location",
     title: "Live location",
     detail: "Text your coordinates every 30 s, 1 min or 5 min.",
     href: "/share/location",
