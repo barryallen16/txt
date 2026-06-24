@@ -265,6 +265,17 @@ export default function PermissionsScreen() {
                 ? "A few system permissions are needed before incoming messages can be read and shared items can arrive."
                 : "Fix anything that is off. The home screen shows this again when a required permission is missing."}
             </Text>
+            {firstRun ? (
+              <Text style={[type.muted, styles.center]}>
+                By continuing you agree to the{" "}
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => router.push("/legal")}
+                >
+                  TERMS
+                </Text>
+              </Text>
+            ) : null}
           </View>
 
           {rows.map((row) => (
@@ -378,6 +389,9 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: "center",
+  },
+  termsLink: {
+    color: colors.accent,
   },
   errorState: {
     flex: 1,

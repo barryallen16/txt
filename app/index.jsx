@@ -127,6 +127,11 @@ export default function ScannerScreen() {
         right={
           <View style={styles.headerActions}>
             <IconButton
+              icon="info"
+              label="How txt works"
+              onPress={() => router.push("/how-it-works")}
+            />
+            <IconButton
               icon="shield"
               label="Permissions"
               onPress={() => router.push("/permissions")}

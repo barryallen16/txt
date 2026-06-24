@@ -79,8 +79,8 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
-  // Ask for the permissions the app cannot work without on the very first
-  // launch, instead of letting the user discover them screen by screen.
+  // On the very first launch, walk the user through how txt works and the
+  // terms, then ask for the permissions the app cannot work without.
   useEffect(() => {
     if (!navigationState?.key) return;
     if (!fontsLoaded && !fontError) return;
@@ -89,7 +89,7 @@ export default function RootLayout() {
 
     try {
       if (getMeta("onboarding_complete") !== "1") {
-        router.replace("/permissions");
+        router.replace("/how-it-works");
       }
     } catch {
       // If the flag cannot be read, do not block the app.
