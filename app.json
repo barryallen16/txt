@@ -97,6 +97,7 @@
       "expo-notifications",
       "./withAndroidAllowBackup",
       "./withNotificationListener",
+      "./withUpiQueries",
       "expo-font"
     ],
     "extra": {

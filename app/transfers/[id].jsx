@@ -29,6 +29,7 @@ import { classifyQr, summariseQr } from "../../lib/qr";
 import { colors, radius, space, type } from "../../lib/theme";
 import { formatClock } from "../../lib/time";
 import { KIND } from "../../lib/transfer";
+import { buildRequestLink, parseUpiLink } from "../../lib/upi";
 
 export default function TransferDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -123,6 +124,15 @@ export default function TransferDetailScreen() {
     Linking.openURL(`geo:${lat},${lon}?q=${lat},${lon}`).catch(() => {});
   };
 
+  const openUpiPayment = async (rawLink) => {
+    try {
+      const { link } = buildRequestLink(rawLink);
+      await Linking.openURL(link);
+    } catch {
+      Alert.alert("Cannot open UPI", "No UPI app could open this request.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
       <AppHeader title="Item" onBack={goBack} />
@@ -185,6 +195,13 @@ export default function TransferDetailScreen() {
             <Text style={[type.body, styles.wrap]}>
               {summariseQr(transfer.payload)}
             </Text>
+            {parseUpiLink(transfer.payload).valid ? (
+              <AppButton
+                label="Pay with UPI"
+                icon="arrow-right"
+                onPress={() => openUpiPayment(transfer.payload)}
+              />
+            ) : null}
           </View>
         ) : null}
 
