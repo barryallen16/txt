@@ -26,11 +26,16 @@ export default function ScannerScreen() {
   const [error, setError] = useState(null);
   const [askingCamera, setAskingCamera] = useState(false);
   const [setup, setSetup] = useState(null);
+  const [focused, setFocused] = useState(false);
+  const [appActive, setAppActive] = useState(
+    AppState.currentState !== "background",
+  );
   const scanLock = useRef(false);
   const navTimer = useRef(null);
 
   useFocusEffect(
     useCallback(() => {
+      setFocused(true);
       scanLock.current = false;
       setScanned(false);
       setError(null);
@@ -43,6 +48,7 @@ export default function ScannerScreen() {
         .catch(() => {});
 
       return () => {
+        setFocused(false);
         active = false;
         if (navTimer.current) {
           clearTimeout(navTimer.current);
@@ -56,6 +62,7 @@ export default function ScannerScreen() {
   // refresh when the app comes back so the banner and camera panel agree.
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (next) => {
+      setAppActive(next === "active");
       if (next === "active") {
         getPermission().catch(() => {});
         getPermissionSnapshot()
@@ -119,6 +126,11 @@ export default function ScannerScreen() {
   };
 
   const setupNeeded = needsSetup(setup);
+  const pausedLabel = scanned
+    ? error
+      ? "Scan paused"
+      : "Opening code"
+    : "Camera paused";
 
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
@@ -195,16 +207,14 @@ export default function ScannerScreen() {
           </View>
         ) : (
           <View style={styles.viewfinder}>
-            {scanned ? (
+            {scanned || !focused || !appActive ? (
               <View style={styles.scanPaused}>
                 <PixelIcon
                   name={error ? "shield" : "qr"}
                   size={24}
                   color={colors.muted}
                 />
-                <Text style={type.muted}>
-                  {error ? "Scan paused" : "Opening code"}
-                </Text>
+                <Text style={type.muted}>{pausedLabel}</Text>
               </View>
             ) : (
               <>

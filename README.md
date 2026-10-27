@@ -1,25 +1,29 @@
 # txt
 
-Send pictures, QR codes and live location over SMS.
-It works offline, so neither phone needs a data plan.
+Send pictures, QR codes, current or live location, and UPI payment requests over SMS.
+Neither phone needs a data plan to send or receive the message.
+A UPI payment still needs the payer's UPI app and its own connection.
 
 ## What it does
 
 - Payments: scan a UPI QR code, enter an amount, and send the request by SMS.
-  The recipient opens it in their UPI app.
+  The recipient opens the link in their UPI app.
   Amounts go into the link as UPI intent fields: `pa`, `pn`, `am`, `cu`, and `tr`/`tn` when present.
   A signed link that already carries an amount is kept byte for byte so its signature stays valid.
   Links that need an amount added follow the [NPCI UPI linking specification](https://www.labnol.org/files/linking.pdf) and are unsigned, so the payer's UPI app may ask them to verify the source.
 - Images: pick a photo.
-  The app compresses it to a grayscale, posterized JPEG of about 1.2 KB and sends it as a series of SMS parts.
+  The app turns it into a grayscale, posterized JPEG and sends it as a series of SMS parts.
+  Fast aims for 1.2 KB, Balanced 1.8 KB, and High detail 2.8 KB.
   The other phone reassembles it.
 - QR codes: scan or paste any QR code text.
   The text goes over SMS, and the recipient rebuilds the same code, whether it started as a metro ticket, a boarding pass or something else.
-- Location: share your live location for a set interval.
+- Location: send one current location, or share live updates for a set interval.
   Each update arrives as an SMS.
+- SMS quota: the app counts its own outgoing messages and stops at 100 per day, India's per-SIM limit.
+  The header shows the used count out of 100, and it resets at local midnight.
 
-Every transfer uses a custom chunked protocol with CRC32 checksums and automatic reassembly.
-A native Android module handles silent `SEND_SMS` and inbox reading, so multipart messages arrive intact.
+Pictures, codes, locations and payment requests all use a custom chunked protocol with CRC32 checksums and automatic reassembly.
+A native Android module handles silent `SEND_SMS` and reads the SMS inbox, so multipart messages arrive intact.
 
 ## Quick start
 
@@ -42,9 +46,12 @@ bun run typecheck
 
 ## Requirements
 
-- Android device with SMS permission, for sending and receiving
+- Android phone with a SIM that can send SMS
 - Expo SDK 54 / React Native 0.81
 - Bun 1.4+
+
+The app asks for SMS, notification, camera, contacts and location access when a feature needs it.
+Notification-listener access is granted in Android settings.
 
 The native SMS module lives in `modules/off-txt-sms` and is linked through Expo autolinking.
 It needs a development build, so Expo Go won't work.
@@ -74,8 +81,12 @@ modules/off-txt-sms/ # Native Android module (Kotlin)
 - SMS protocol: each part is `ot1.<id>.<kind>.<seq>.<total>.<crc>.<chunk>`.
   Every field is base36, and one part fits in a single GSM-7 segment of 153 characters.
   The receiver reassembles the parts.
-- Image compression: grayscale, posterization and resizing to about 1.2 KB, then the payload is split into parts.
-- Background listener: a Headless JS task reads SMS notifications, stores the parts and triggers reassembly when the app opens.
+- Image compression: grayscale, posterization and resizing to the selected target, then the payload is split into parts.
+  The three presets aim for 1.2 KB, 1.8 KB and 2.8 KB.
+- SMS quota: every send goes through `lib/sms.js`, which records the segments after the radio accepts them.
+  `lib/quota.js` keeps the daily count and resets it after local midnight.
+- Background listener: a Headless JS task reads SMS notifications and ingests parts as they arrive.
+  An inbox sync runs on launch, every 10 seconds while the app is open, and on refresh.
 - Fonts: Saira for body text and Geist Pixel for display, both loaded at runtime with expo-font.
 
 ## Testing
@@ -84,6 +95,10 @@ modules/off-txt-sms/ # Native Android module (Kotlin)
 bun test          # all tests
 bun run typecheck # TypeScript strict mode
 ```
+
+## Issues
+
+Report bugs and feature requests at https://github.com/barryallen16/txt/issues.
 
 ## License
 

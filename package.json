@@ -47,6 +47,13 @@
     }
   },
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/barryallen16/txt.git"
+  },
+  "bugs": {
+    "url": "https://github.com/barryallen16/txt/issues"
+  },
   "devDependencies": {
     "@types/react": "~19.1.10",
     "typescript": "~5.9.2"

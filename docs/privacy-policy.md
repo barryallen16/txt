@@ -34,4 +34,4 @@ SMS is not encrypted, so write accordingly.
 
 ## Contact
 
-Open an issue on the project's GitHub repository.
+Open an issue at https://github.com/barryallen16/txt/issues.

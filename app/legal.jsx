@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import AppHeader from "../components/AppHeader";
@@ -90,7 +97,8 @@ const TABS = [
       },
       {
         title: "Questions",
-        body: "Open an issue on the project's GitHub repository.",
+        body: "Found a bug or have a question? Open an issue on GitHub.",
+        url: "https://github.com/barryallen16/txt/issues/new",
       },
     ],
   },
@@ -141,6 +149,17 @@ export default function LegalScreen() {
           <View key={section.title} style={styles.card}>
             <Text style={type.bodyMedium}>{section.title}</Text>
             <Text style={type.muted}>{section.body}</Text>
+            {section.url ? (
+              <Pressable
+                onPress={() => Linking.openURL(section.url).catch(() => {})}
+                accessibilityRole="link"
+                accessibilityLabel="Open an issue on GitHub"
+                hitSlop={8}
+                style={styles.linkRow}
+              >
+                <Text style={[type.label, styles.link]}>OPEN AN ISSUE</Text>
+              </Pressable>
+            ) : null}
           </View>
         ))}
 
@@ -193,5 +212,12 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: radius,
     backgroundColor: colors.panel,
+  },
+  linkRow: {
+    alignSelf: "flex-start",
+    paddingTop: space.sm,
+  },
+  link: {
+    color: colors.accent,
   },
 });

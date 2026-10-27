@@ -31,12 +31,16 @@ export default function QrShareScreen() {
   const [askingCamera, setAskingCamera] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(null);
+  const [appActive, setAppActive] = useState(
+    AppState.currentState !== "background",
+  );
   const scanLock = useRef(false);
 
   const check = normaliseQr(text);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (next) => {
+      setAppActive(next === "active");
       if (next === "active") getPermission().catch(() => {});
     });
     return () => subscription.remove();
@@ -130,6 +134,14 @@ export default function QrShareScreen() {
             loading={askingCamera}
             onPress={askCamera}
           />
+        </View>
+      );
+    }
+
+    if (!appActive) {
+      return (
+        <View style={styles.viewfinder}>
+          <Loading label="Starting camera" style={styles.fill} />
         </View>
       );
     }
