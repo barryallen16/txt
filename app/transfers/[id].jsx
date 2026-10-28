@@ -26,10 +26,15 @@ import { getTransfer, listTransfers } from "../../lib/db";
 import { formatAge, formatDistance } from "../../lib/geo";
 import { buildTrail, decodeLocation } from "../../lib/geo";
 import { classifyQr, summariseQr } from "../../lib/qr";
+import { isPhoneSender } from "../../lib/sender";
 import { colors, radius, space, type } from "../../lib/theme";
 import { formatClock } from "../../lib/time";
 import { KIND } from "../../lib/transfer";
-import { buildRequestLink, parseUpiLink } from "../../lib/upi";
+import {
+  buildMobilePaymentLink,
+  buildRequestLink,
+  parseUpiLink,
+} from "../../lib/upi";
 
 export default function TransferDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -133,14 +138,33 @@ export default function TransferDetailScreen() {
     }
   };
 
+  const openMobilePayment = async (phone) => {
+    try {
+      const res = buildMobilePaymentLink({ mobileOrVpa: phone });
+      if (res.valid && res.link) {
+        await Linking.openURL(res.link);
+      } else {
+        Alert.alert("Cannot open UPI", res.reason ?? "Invalid mobile number.");
+      }
+    } catch {
+      Alert.alert("Cannot open UPI", "No UPI app could open this payment.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
       <AppHeader title="Item" onBack={goBack} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.meta}>
-          <Text style={type.label}>FROM</Text>
-          <Text style={type.bodyMedium}>{transfer.sender || "Unknown sender"}</Text>
+          <Text style={type.label}>
+            {transfer.direction === "sent" ? "SENT TO" : "FROM"}
+          </Text>
+          <Text style={type.bodyMedium}>
+            {transfer.direction === "sent"
+              ? transfer.recipient || "Unknown recipient"
+              : transfer.sender || "Unknown sender"}
+          </Text>
           <Text style={type.muted}>
             {formatClock(transfer.received_at)}
             {trail?.ageMs != null ? ` · ${formatAge(trail.ageMs)}` : ""}
@@ -200,6 +224,14 @@ export default function TransferDetailScreen() {
                 label="Pay with UPI"
                 icon="arrow-right"
                 onPress={() => openUpiPayment(transfer.payload)}
+              />
+            ) : null}
+            {transfer.direction !== "sent" && isPhoneSender(transfer.sender) ? (
+              <AppButton
+                label={`Pay to sender (${transfer.sender})`}
+                icon="phone"
+                variant="outline"
+                onPress={() => openMobilePayment(transfer.sender)}
               />
             ) : null}
           </View>

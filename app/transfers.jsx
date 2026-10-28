@@ -83,13 +83,16 @@ function groupByDay(items) {
 }
 
 export default function TransfersScreen() {
-  const [items, setItems] = useState([]);
+  const [tab, setTab] = useState("received");
+  const [receivedItems, setReceivedItems] = useState([]);
+  const [sentItems, setSentItems] = useState([]);
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const read = useCallback(() => {
-    setItems(listTransfers());
+    setReceivedItems(listTransfers("received"));
+    setSentItems(listTransfers("sent"));
     setPending(listPendingTransfers());
   }, []);
 
@@ -140,7 +143,8 @@ export default function TransfersScreen() {
     return () => subscription.remove();
   }, [read]);
 
-  const sections = useMemo(() => groupByDay(items), [items]);
+  const currentItems = tab === "received" ? receivedItems : sentItems;
+  const sections = useMemo(() => groupByDay(currentItems), [currentItems]);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -172,14 +176,48 @@ export default function TransfersScreen() {
         }
       />
 
-      {loading && items.length === 0 && pending.length === 0 ? (
-        <Loading label="Checking for new items" style={styles.fill} />
-      ) : items.length === 0 && pending.length === 0 ? (
+      <View style={styles.tabs}>
+        <Pressable
+          onPress={() => setTab("received")}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: tab === "received" }}
+          style={[styles.tab, tab === "received" && styles.tabActive]}
+        >
+          <Text style={[type.label, tab === "received" && styles.tabActiveText]}>
+            RECEIVED{receivedItems.length > 0 ? ` ${receivedItems.length}` : ""}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setTab("sent")}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: tab === "sent" }}
+          style={[styles.tab, tab === "sent" && styles.tabActive]}
+        >
+          <Text style={[type.label, tab === "sent" && styles.tabActiveText]}>
+            SENT{sentItems.length > 0 ? ` ${sentItems.length}` : ""}
+          </Text>
+        </Pressable>
+      </View>
+
+      {loading && currentItems.length === 0 && (tab === "sent" || pending.length === 0) ? (
+        <Loading
+          label={tab === "received" ? "Checking for new items" : "Loading sent items"}
+          style={styles.fill}
+        />
+      ) : currentItems.length === 0 && (tab === "sent" || pending.length === 0) ? (
         <View style={styles.empty}>
-          <PixelIcon name="inbox" size={24} color={colors.muted} />
-          <Text style={[type.body, styles.center]}>Nothing received yet.</Text>
+          <PixelIcon
+            name={tab === "received" ? "inbox" : "send"}
+            size={24}
+            color={colors.muted}
+          />
+          <Text style={[type.body, styles.center]}>
+            {tab === "received" ? "Nothing received yet." : "Nothing sent yet."}
+          </Text>
           <Text style={[type.muted, styles.center]}>
-            Pictures, QR codes and live location from your contacts land here.
+            {tab === "received"
+              ? "Pictures, QR codes and live location from your contacts land here."
+              : "Pictures, QR codes and locations you share will be kept here."}
           </Text>
           <AppButton label="Send something" onPress={() => router.push("/share")} />
         </View>
@@ -189,7 +227,7 @@ export default function TransfersScreen() {
           keyExtractor={(section) => section.label}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            pending.length > 0 ? (
+            tab === "received" && pending.length > 0 ? (
               <View style={styles.section}>
                 <Text style={type.label}>IN PROGRESS</Text>
                 {pending.map((item) => (
@@ -210,7 +248,12 @@ export default function TransfersScreen() {
             <View style={styles.section}>
               <Text style={type.label}>{section.label.toUpperCase()}</Text>
               {section.items.map((item) => (
-                <Row key={item.id} item={item} items={items} />
+                <Row
+                  key={item.id}
+                  item={item}
+                  items={currentItems}
+                  isSent={tab === "sent"}
+                />
               ))}
             </View>
           )}
@@ -271,15 +314,18 @@ function PendingRow({ item }) {
   );
 }
 
-function Row({ item, items }) {
+function Row({ item, items, isSent = false }) {
   const open = () => router.push(`/transfers/${item.id}`);
+  const contactText = isSent
+    ? item.recipient ? `To ${item.recipient}` : "Unknown recipient"
+    : item.sender || "Unknown sender";
 
   if (item.kind === KIND.LOCATION) {
     const point = decodeLocation(item.payload ?? "");
     const sameSession = items.filter(
       (other) =>
         other.kind === KIND.LOCATION &&
-        other.sender === item.sender &&
+        (isSent ? other.recipient === item.recipient : other.sender === item.sender) &&
         (other.session ?? "") === (item.session ?? ""),
     );
     const trail = buildTrail(
@@ -296,7 +342,7 @@ function Row({ item, items }) {
         <PixelIcon name="location" size={24} color={colors.text} />
         <View style={styles.rowText}>
           <Text style={type.bodyMedium} numberOfLines={1}>
-            {item.sender || "Unknown sender"}
+            {contactText}
           </Text>
           <Text style={type.muted} numberOfLines={1}>
             {point ? locationLine(item) : "Unreadable fix"}
@@ -331,7 +377,7 @@ function Row({ item, items }) {
       )}
       <View style={styles.rowText}>
         <Text style={type.bodyMedium} numberOfLines={1}>
-          {item.sender || "Unknown sender"}
+          {contactText}
         </Text>
         <Text style={type.muted} numberOfLines={1}>
           {preview(item) ?? ""}
@@ -363,6 +409,27 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+  tabs: {
+    flexDirection: "row",
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+    paddingTop: space.md,
+  },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: space.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius,
+  },
+  tabActive: {
+    backgroundColor: colors.panel,
+    borderColor: colors.text,
+  },
+  tabActiveText: {
+    color: colors.text,
   },
   list: {
     padding: space.lg,

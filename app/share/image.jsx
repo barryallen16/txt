@@ -15,6 +15,7 @@ import AppButton from "../../components/AppButton";
 import AppHeader from "../../components/AppHeader";
 import PixelIcon from "../../components/PixelIcon";
 import RecipientPicker from "../../components/RecipientPicker";
+import { saveTransfer } from "../../lib/db";
 import {
   COMPRESSION_PRESETS,
   DEFAULT_PRESET,
@@ -26,6 +27,7 @@ import {
 } from "../../lib/image";
 import { ensureSendPermission, sendParts } from "../../lib/sms";
 import { colors, radius, space, type } from "../../lib/theme";
+import { KIND } from "../../lib/transfer";
 
 export default function ImageShareScreen() {
   const [recipient, setRecipient] = useState(null);
@@ -114,6 +116,14 @@ export default function ImageShareScreen() {
       );
 
       if (result.sent) {
+        saveTransfer({
+          transferKey: parts.id,
+          kind: KIND.IMAGE,
+          recipient: recipient.name ? `${recipient.name} (${recipient.number})` : recipient.number,
+          payloadB64: photo.base64,
+          direction: "sent",
+          receivedAt: Date.now(),
+        });
         setStatus("sent");
         setPhoto(null);
         setSource(null);

@@ -17,6 +17,7 @@ import AppHeader from "../../components/AppHeader";
 import Loading from "../../components/Loading";
 import PixelIcon from "../../components/PixelIcon";
 import RecipientPicker from "../../components/RecipientPicker";
+import { saveTransfer } from "../../lib/db";
 import { classifyQr, normaliseQr, summariseQr } from "../../lib/qr";
 import { ensureSendPermission, sendParts } from "../../lib/sms";
 import { KIND, encodeTransfer } from "../../lib/transfer";
@@ -85,9 +86,17 @@ export default function QrShareScreen() {
         return;
       }
 
-      const { parts } = encodeTransfer(KIND.QR, check.text);
+      const { id, parts } = encodeTransfer(KIND.QR, check.text);
       const result = await sendParts(recipient.number, parts);
       if (result.sent) {
+        saveTransfer({
+          transferKey: id,
+          kind: KIND.QR,
+          recipient: recipient.name ? `${recipient.name} (${recipient.number})` : recipient.number,
+          payload: check.text,
+          direction: "sent",
+          receivedAt: Date.now(),
+        });
         setSent(true);
       } else {
         setError(result.reason ?? "The message did not leave the phone.");

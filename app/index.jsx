@@ -261,9 +261,15 @@ export default function ScannerScreen() {
           </View>
         ) : null}
 
+        <AppButton
+          label="No QR code? Enter mobile number"
+          variant="outline"
+          onPress={() => router.push("/pay/manual")}
+        />
+
         <Text style={[type.muted, styles.hint]}>
-          Point the camera at a UPI QR code. The amount you type is carried in
-          the request link.
+          Point the camera at a UPI QR code, or enter a mobile number directly
+          to create a request.
         </Text>
       </View>
     </SafeAreaView>

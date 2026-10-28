@@ -30,6 +30,12 @@ const OPTIONS = [
     detail: "Tickets, passes, payment codes. The text travels, the code rebuilds.",
     href: "/share/qr",
   },
+  {
+    icon: "message-text",
+    title: "Payment request",
+    detail: "Request money to a mobile number or UPI ID without a QR code.",
+    href: "/pay/manual",
+  },
 ];
 
 export default function ShareScreen() {

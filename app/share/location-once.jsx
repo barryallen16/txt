@@ -7,11 +7,13 @@ import AppButton from "../../components/AppButton";
 import AppHeader from "../../components/AppHeader";
 import PixelIcon from "../../components/PixelIcon";
 import RecipientPicker from "../../components/RecipientPicker";
-import { formatAge, newSessionId } from "../../lib/geo";
+import { saveTransfer } from "../../lib/db";
+import { encodeLocation, formatAge, newSessionId } from "../../lib/geo";
 import { requestLocationAccess, shareLocation } from "../../lib/locationShare";
 import { ensureSendPermission } from "../../lib/sms";
 import { colors, radius, space, type } from "../../lib/theme";
 import { withTimeout } from "../../lib/timeout";
+import { KIND } from "../../lib/transfer";
 
 const FIX_TIMEOUT_MS = 20_000;
 
@@ -60,13 +62,26 @@ export default function CurrentLocationScreen() {
         timestamp: current.timestamp || Date.now(),
       };
 
+      const sessionId = newSessionId();
       const result = await shareLocation({
         address: recipient.number,
-        session: newSessionId(),
+        session: sessionId,
         fix,
       });
 
       if (result.sent) {
+        const { payload } = encodeLocation({ ...fix, session: sessionId });
+        saveTransfer({
+          transferKey: sessionId,
+          kind: KIND.LOCATION,
+          recipient: recipient.name
+            ? `${recipient.name} (${recipient.number})`
+            : recipient.number,
+          payload,
+          session: sessionId,
+          direction: "sent",
+          receivedAt: Date.now(),
+        });
         setSent({ fix, at: Date.now() });
       } else {
         setError(result.reason ?? "The message did not leave the phone.");

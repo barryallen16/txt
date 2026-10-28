@@ -29,8 +29,14 @@ import {
   toDate,
 } from "../lib/db";
 import { syncInbox, INBOX_SYNCED_EVENT } from "../lib/syncInbox";
+import { isPhoneSender } from "../lib/sender";
 import { dayLabel } from "../lib/time";
-import { buildRequestLink, normalizeAmount, parseUpiLink } from "../lib/upi";
+import {
+  buildMobilePaymentLink,
+  buildRequestLink,
+  normalizeAmount,
+  parseUpiLink,
+} from "../lib/upi";
 
 function dayKey(date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -180,6 +186,29 @@ export default function SmsPaymentsScreen() {
       await Linking.openURL(link);
     } catch {
       setError("No UPI app could open this request.");
+    } finally {
+      setPayingId(null);
+    }
+  };
+
+  const payMobile = async (item) => {
+    if (!item.sender) return;
+
+    setError(null);
+    setPayingId(`${item.id}:mobile`);
+    try {
+      const res = buildMobilePaymentLink({
+        mobileOrVpa: item.sender,
+        amount: item.amount,
+        name: item.payee_name,
+      });
+      if (res.valid && res.link) {
+        await Linking.openURL(res.link);
+      } else {
+        setError(res.reason ?? "Invalid mobile number.");
+      }
+    } catch {
+      setError("No UPI app could open this payment.");
     } finally {
       setPayingId(null);
     }
@@ -411,12 +440,26 @@ export default function SmsPaymentsScreen() {
                 ) : (
                   <>
                     <AppButton
-                      label={paying ? "Opening UPI" : "Pay"}
+                      label={payingId === item.id ? "Opening UPI" : "Pay with QR"}
                       icon="arrow-right"
-                      loading={paying}
+                      loading={payingId === item.id}
                       disabled={working || !item.upi_link}
                       onPress={() => pay(item)}
                     />
+                    {isPhoneSender(item.sender) ? (
+                      <AppButton
+                        label={
+                          payingId === `${item.id}:mobile`
+                            ? "Opening UPI"
+                            : `Pay to mobile (${item.sender})`
+                        }
+                        icon="phone"
+                        variant="outline"
+                        loading={payingId === `${item.id}:mobile`}
+                        disabled={working || paying}
+                        onPress={() => payMobile(item)}
+                      />
+                    ) : null}
                     <View style={styles.actions}>
                       <AppButton
                         label="Mark done"

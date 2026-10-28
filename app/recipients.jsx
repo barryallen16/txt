@@ -19,9 +19,10 @@ import IconButton from "../components/IconButton";
 import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
 import { contactsAccess, loadPhoneContacts } from "../lib/contacts";
-import { listFavorites, toggleFavorite } from "../lib/db";
+import { listFavorites, saveTransfer, toggleFavorite } from "../lib/db";
 import { ensureSendPermission, sendParts } from "../lib/sms";
 import { colors, radius, space, type } from "../lib/theme";
+import { KIND } from "../lib/transfer";
 import {
   buildRequestLink,
   buildRequestText,
@@ -192,6 +193,24 @@ export default function RecipientsScreen() {
         setStatus("failed");
         setStatusDetail(failed);
       } else {
+        for (const number of numbers) {
+          const matched = selectedContacts.find((c) => c.number === number);
+          const recipientLabel = matched?.name
+            ? `${matched.name} (${number})`
+            : number;
+          try {
+            saveTransfer({
+              transferKey: `req_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              kind: KIND.QR,
+              recipient: recipientLabel,
+              payload: payable.link,
+              direction: "sent",
+              receivedAt: Date.now(),
+            });
+          } catch {
+            // Best effort
+          }
+        }
         setStatus("sent");
         setSelectedIds([]);
       }
