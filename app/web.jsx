@@ -3,10 +3,9 @@
 // Paste a received ":txt Pay Rs ..." SMS to open a payment request, or build
 // a formatted SMS to copy and send. Payment requests only — no SMS, camera,
 // location or gallery access on the web.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,15 +22,42 @@ import {
   parseUpiLink,
 } from "../lib/upi";
 import { colors, radius, space } from "../lib/theme";
+import { copyText } from "../lib/clipboard";
 import { useToast } from "../components/Toast";
 
-const copyToClipboard = async (text) => {
-  if (typeof navigator !== "undefined" && navigator.clipboard) {
-    await navigator.clipboard.writeText(text);
-    return true;
-  }
-  return false;
-};
+// A copy action that always answers back: the label flips to "copied" briefly
+// and a toast confirms it, so a click is never silently ignored.
+function CopyButton({ get, label, style, textStyle, showLabel = true }) {
+  const showToast = useToast();
+  const [copied, setCopied] = useState(false);
+  const timer = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const press = async () => {
+    const ok = await copyText(get());
+    if (ok) {
+      setCopied(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 1600);
+    }
+    showToast({
+      message: ok ? `${label} copied` : "Copy is not supported here",
+      type: ok ? "info" : "danger",
+    });
+  };
+
+  return (
+    <Pressable onPress={press} style={[styles.button, copied && styles.buttonCopied, style]}>
+      <Text style={[buttonText, textStyle]}>{copied ? "copied \u2713" : label}</Text>
+    </Pressable>
+  );
+}
 
 // Inline SVG logo, kept small so it renders cleanly on web.
 const TXT_LOGO = (
@@ -94,9 +120,14 @@ export default function WebScreen() {
     if (!parsed) return;
     try {
       await Linking.openURL(parsed.link);
+      showToast({ message: "Opening your UPI app..." });
     } catch {
-      // On desktop browsers the upi:// scheme won't open anything; the link is
-      // still copyable below.
+      // On desktop browsers the upi:// scheme won't open anything; the amount
+      // and the link are still copyable below.
+      showToast({
+        message: "Desktop browsers cannot open UPI links. Use copy below.",
+        type: "danger",
+      });
     }
   };
 
@@ -105,23 +136,19 @@ export default function WebScreen() {
   const [note, setNote] = useState("");
   const [smsText, setSmsText] = useState("");
 
-  const mobileCheck = buildMobilePaymentLink({
-    mobileOrVpa: payee,
-    amount: amount || undefined,
-    name: note ? null : undefined,
-    note,
-  });
+  const mobileCheck = buildMobilePaymentLink({ mobileOrVpa: payee });
 
   const createSms = () => {
     if (!mobileCheck.valid || !mobileCheck.link) return;
     const bodyText = amount ? `Pay Rs ${amount}` : "Pay";
-    setSmsText(`:txt ${bodyText} ${mobileCheck.link}`);
+    const base = `:txt ${bodyText} ${mobileCheck.link}`;
+    setSmsText(note.trim() ? `${base} (${note.trim()})` : base);
   };
 
   const copySms = async () => {
     if (!smsText) return;
-    const ok = await copyToClipboard(smsText);
-    showToast({ message: ok ? "SMS copied" : "Copy not supported on this browser" });
+    const ok = await copyText(smsText);
+    showToast({ message: ok ? "SMS copied" : "Copy is not supported here", type: ok ? "info" : "danger" });
   };
 
   return (
@@ -187,15 +214,20 @@ export default function WebScreen() {
                 <Pressable onPress={payWithUpi} style={styles.button}>
                   <Text style={buttonText}>pay with upi</Text>
                 </Pressable>
-                <Pressable
-                  onPress={async () => {
-                    const ok = await copyToClipboard(parsed.link);
-                    showToast({ message: ok ? "link copied" : "copy not supported" });
-                  }}
-                  style={styles.buttonOutline}
-                >
-                  <Text style={[buttonText, { color: colors.muted }]}>copy link</Text>
-                </Pressable>
+              </View>
+              <View style={styles.buttonRow}>
+                {parsed.amount ? (
+                  <CopyButton
+                    get={() => String(parsed.amount ?? "")}
+                    label="copy amount"
+                    style={styles.buttonRowItem}
+                  />
+                ) : null}
+                <CopyButton
+                  get={() => parsed.link}
+                  label="copy link"
+                  style={styles.buttonRowItem}
+                />
               </View>
             </View>
           </View>
@@ -357,6 +389,12 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     backgroundColor: colors.line,
     opacity: 0.5,
+  },
+  buttonCopied: {
+    opacity: 0.85,
+  },
+  buttonRowItem: {
+    flex: 1,
   },
   buttonOutline: {
     marginTop: space.sm,

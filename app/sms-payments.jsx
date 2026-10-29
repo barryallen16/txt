@@ -30,11 +30,9 @@ import {
 } from "../lib/db";
 import { syncInbox, INBOX_SYNCED_EVENT } from "../lib/syncInbox";
 import { dayLabel } from "../lib/time";
-import {
-  buildRequestLink,
-  normalizeAmount,
-  parseUpiLink,
-} from "../lib/upi";
+import { copyText } from "../lib/clipboard";
+import { normalizeAmount, parseUpiLink } from "../lib/upi";
+import { useToast } from "../components/Toast";
 
 function dayKey(date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -58,6 +56,7 @@ function timeOf(date) {
 }
 
 export default function SmsPaymentsScreen() {
+  const showToast = useToast();
   const [tab, setTab] = useState("open");
   const [openRequests, setOpenRequests] = useState([]);
   const [history, setHistory] = useState([]);
@@ -174,19 +173,31 @@ export default function SmsPaymentsScreen() {
     return [...groups.values()];
   }, [tab, openRequests, history]);
 
+  // The link is opened exactly as it arrived. UPI apps that ignore an amount
+  // in an unsigned intent get the amount from the copy button instead.
   const pay = async (item) => {
     if (!item.upi_link) return;
 
     setError(null);
     setPayingId(item.id);
     try {
-      const { link } = buildRequestLink(item.upi_link, item.amount);
-      await Linking.openURL(link);
+      await Linking.openURL(item.upi_link);
     } catch {
       setError("No UPI app could open this request.");
     } finally {
       setPayingId(null);
     }
+  };
+
+  const copyAmount = async (item) => {
+    if (!item.amount) return;
+    const ok = await copyText(item.amount);
+    showToast({
+      message: ok
+        ? `Amount ₹${item.amount} copied. Paste it in your UPI app.`
+        : "Could not copy the amount.",
+      type: ok ? "info" : "danger",
+    });
   };
 
   const handle = (item, status) => {
@@ -414,13 +425,32 @@ export default function SmsPaymentsScreen() {
                   </View>
                 ) : (
                   <>
-                    <AppButton
-                      label={payingId === item.id ? "Opening UPI" : "Pay with QR"}
-                      icon="arrow-right"
-                      loading={payingId === item.id}
-                      disabled={working || !item.upi_link}
-                      onPress={() => pay(item)}
-                    />
+                    <View style={styles.actions}>
+                      <AppButton
+                        label={payingId === item.id ? "Opening UPI" : "Pay now"}
+                        icon="arrow-right"
+                        loading={payingId === item.id}
+                        disabled={working || !item.upi_link}
+                        onPress={() => pay(item)}
+                        style={styles.actionButton}
+                      />
+                      {item.amount ? (
+                        <AppButton
+                          label={`Copy \u20B9${item.amount}`}
+                          icon="rupee"
+                          variant="outline"
+                          disabled={working}
+                          onPress={() => copyAmount(item)}
+                          style={styles.actionButton}
+                        />
+                      ) : null}
+                    </View>
+                    <Text style={[type.muted, styles.payHint]}>
+                      {"Your UPI app opens without an amount. Use the copy button to paste "}
+                      {"\u20B9"}
+                      {item.amount ?? "the amount"}
+                      {" into it."}
+                    </Text>
                     <View style={styles.actions}>
                       <AppButton
                         label="Mark done"
@@ -586,6 +616,9 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  payHint: {
+    marginTop: space.xs,
   },
   handledRow: {
     flexDirection: "row",

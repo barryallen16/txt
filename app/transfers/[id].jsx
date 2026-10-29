@@ -33,6 +33,8 @@ import {
   buildRequestLink,
   parseUpiLink,
 } from "../../lib/upi";
+import { copyText } from "../../lib/clipboard";
+import { useToast } from "../../components/Toast";
 
 export default function TransferDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -43,6 +45,13 @@ export default function TransferDetailScreen() {
     () => getTransfer(Number(id)) ?? null,
     [id],
   );
+  const showToast = useToast();
+
+  // Open the link byte-for-byte as it arrived - nothing is rewritten here.
+  // buildRequestLink now only validates and reads the amount back.
+  const upiAmount = transfer && parseUpiLink(transfer.payload ?? "").valid
+    ? buildRequestLink(transfer.payload).amount
+    : null;
 
   const trail = useMemo(() => {
     if (!transfer || transfer.kind !== KIND.LOCATION) return null;
@@ -129,11 +138,21 @@ export default function TransferDetailScreen() {
 
   const openUpiPayment = async (rawLink) => {
     try {
-      const { link } = buildRequestLink(rawLink);
-      await Linking.openURL(link);
+      await Linking.openURL(rawLink.trim());
     } catch {
       Alert.alert("Cannot open UPI", "No UPI app could open this request.");
     }
+  };
+
+  const copyUpiAmount = async () => {
+    if (!upiAmount) return;
+    const ok = await copyText(upiAmount);
+    showToast({
+      message: ok
+        ? `Amount \u20B9${upiAmount} copied. Paste it in your UPI app.`
+        : "Could not copy the amount.",
+      type: ok ? "info" : "danger",
+    });
   };
 
   return (
@@ -205,11 +224,21 @@ export default function TransferDetailScreen() {
               {summariseQr(transfer.payload)}
             </Text>
             {parseUpiLink(transfer.payload).valid ? (
-              <AppButton
-                label="Pay with UPI"
-                icon="arrow-right"
-                onPress={() => openUpiPayment(transfer.payload)}
-              />
+              <>
+                <AppButton
+                  label="Pay with UPI"
+                  icon="arrow-right"
+                  onPress={() => openUpiPayment(transfer.payload)}
+                />
+                {upiAmount ? (
+                  <AppButton
+                    label={`Copy \u20B9${upiAmount}`}
+                    icon="rupee"
+                    variant="outline"
+                    onPress={copyUpiAmount}
+                  />
+                ) : null}
+              </>
             ) : null}
           </View>
         ) : null}
