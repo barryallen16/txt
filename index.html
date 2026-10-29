@@ -48,5 +48,30 @@
       });
     }
   </script>
+  <script>
+    (function () {
+      var base = "/txt";
+      var p = window.location.pathname;
+      if (p === "/" || p === base || p.indexOf(base + "/") === 0) {
+        if (p !== base && p.indexOf(base + "/") === 0) {
+          var clean = p.slice(base.length) || "/";
+          window.history.replaceState(null, "", clean);
+        }
+      } else if (p !== "/") {
+        // Refreshed at a clean path like /web: redirect back into /txt so
+        // GitHub Pages serves 404.html and this script strips again.
+        window.location.replace(base + p);
+      }
+    })();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").then(() => {
+          console.log("txt SW registered");
+        });
+      });
+    }
+  </script>
 </body>
 </html>
