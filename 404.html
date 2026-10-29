@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
     <title>txt</title>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
@@ -11,6 +11,12 @@
       html,
       body {
         height: 100%;
+        background-color: #0b0c10;
+        color-scheme: dark;
+      }
+      body {
+        overflow-x: hidden;
+        overscroll-behavior-y: none;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
@@ -21,9 +27,12 @@
         display: flex;
         height: 100%;
         flex: 1;
+        background-color: #0b0c10;
       }
     </style>
-    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#0b0c10" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="manifest" href="./manifest.json" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
@@ -39,7 +48,7 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="./_expo/static/js/web/index-c9bbd9ae834ef85b80d4045ae09492f0.js" defer></script>
+  <script src="./_expo/static/js/web/index-2c61967758b0513a6741e032bc6385c1.js" defer></script>
   <script>
     (function () {
       var base = "/txt";

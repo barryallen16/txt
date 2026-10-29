@@ -7,7 +7,7 @@
 // at a domain root. The build stamps CACHE_NAME with a content hash, so a new
 // deploy replaces the cached shell instead of serving it forever.
 
-const CACHE_NAME = "txt-vf40bef5768e5";
+const CACHE_NAME = "txt-v239f6497737c";
 const ASSETS = [
   "./",
   "./web",
