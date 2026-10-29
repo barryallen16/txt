@@ -14,16 +14,19 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
+import QRCode from "react-native-qrcode-svg";
 import {
   buildMobilePaymentLink,
   extractRequestAmount,
   extractUpiLink,
   normalizeAmount,
+  isMerchantUpi,
   isPersonalUpi,
   parseUpiLink,
   validateAmount,
 } from "../lib/upi";
-import { colors, radius, space, type } from "../lib/theme";
+import { colors, fonts, radius, space, type } from "../lib/theme";
 import { copyText } from "../lib/clipboard";
 import { useToast } from "../components/Toast";
 
@@ -57,7 +60,7 @@ function CopyButton({ get, label, style, textStyle, showLabel = true }) {
   return (
     <Pressable onPress={press} style={[styles.button, copied && styles.buttonCopied, style]}>
       <Text style={[type.button, { color: colors.accentInk }, textStyle]}>
-        {copied ? "copied \u2713" : label}
+        {copied ? "copied" : label}
       </Text>
     </Pressable>
   );
@@ -75,10 +78,25 @@ const head = { ...type.label, textTransform: "uppercase" };
 
 export default function WebScreen() {
   const showToast = useToast();
+  const params = useLocalSearchParams();
 
-  const [pasteText, setPasteText] = useState("");
+  const initialParamText = typeof params?.text === "string" ? params.text : (typeof params?.link === "string" ? params.link : "");
+  const [pasteText, setPasteText] = useState(initialParamText);
   const [parsed, setParsed] = useState(null);
   const [pasteError, setPasteError] = useState(null);
+
+  useEffect(() => {
+    if (initialParamText && !parsed) {
+      const link = extractUpiLink(initialParamText);
+      if (link) {
+        const upi = parseUpiLink(link);
+        if (upi.valid) {
+          const amount = extractRequestAmount(initialParamText) || normalizeAmount(upi.am);
+          setParsed({ link, upi, amount });
+        }
+      }
+    }
+  }, [initialParamText]);
 
   const pasteCheck = useMemo(() => {
     const link = extractUpiLink(pasteText);
@@ -96,6 +114,35 @@ export default function WebScreen() {
       return;
     }
     setParsed(pasteCheck);
+  };
+
+  const [copiedId, setCopiedId] = useState(false);
+  const idTimer = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (idTimer.current) clearTimeout(idTimer.current);
+    },
+    [],
+  );
+
+  const copyAndOpenUpi = async () => {
+    if (!parsed?.upi?.pa) return;
+    const ok = await copyText(parsed.upi.pa);
+    if (ok) {
+      setCopiedId(true);
+      if (idTimer.current) clearTimeout(idTimer.current);
+      idTimer.current = setTimeout(() => setCopiedId(false), 1600);
+      showToast({ message: `UPI ID ${parsed.upi.pa} copied`, type: "info" });
+    }
+    try {
+      await Linking.openURL(parsed.link);
+    } catch {
+      showToast({
+        message: "UPI ID copied. Desktop browsers cannot open UPI links.",
+        type: ok ? "info" : "danger",
+      });
+    }
   };
 
   const payWithUpi = async () => {
@@ -132,9 +179,24 @@ export default function WebScreen() {
     setSmsText(note.trim() ? `${base} (${note.trim()})` : base);
   };
 
+  const [smsCopied, setSmsCopied] = useState(false);
+  const smsTimer = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (smsTimer.current) clearTimeout(smsTimer.current);
+    },
+    [],
+  );
+
   const copySms = async () => {
     if (!smsText) return;
     const ok = await copyText(smsText);
+    if (ok) {
+      setSmsCopied(true);
+      if (smsTimer.current) clearTimeout(smsTimer.current);
+      smsTimer.current = setTimeout(() => setSmsCopied(false), 1600);
+    }
     showToast({ message: ok ? "SMS copied" : "Copy is not supported here", type: ok ? "info" : "danger" });
   };
 
@@ -190,42 +252,62 @@ export default function WebScreen() {
           <View style={styles.section}>
             <Text style={[head, styles.sectionHead]}>payment request</Text>
             <View style={styles.card}>
+              {parsed.amount ? (
+                <View style={styles.prominentAmountBlock}>
+                  <Text style={type.label}>MONEY REQUESTED</Text>
+                  <Text style={styles.prominentAmount}>
+                    ₹{parsed.amount}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={styles.qrContainer}>
+                <QRCode
+                  value={parsed.link}
+                  size={180}
+                  color={colors.bg}
+                  backgroundColor="#ffffff"
+                />
+              </View>
               <Text style={type.bodyMedium}>{parsed.upi.pn || parsed.upi.pa}</Text>
               <Text style={type.muted}>{parsed.upi.pa}</Text>
-              {parsed.amount ? (
-                <Text style={{ ...type.amountSmall, fontSize: 24 }}>
-                  ₹{parsed.amount}
-                </Text>
-              ) : null}
               <View style={styles.buttonRow}>
-                <Pressable onPress={payWithUpi} style={styles.button}>
-                  <Text style={[type.button, { color: colors.accentInk }]}>pay with upi</Text>
+                <Pressable
+                  onPress={copyAndOpenUpi}
+                  style={[styles.button, copiedId && styles.buttonCopied, styles.buttonRowItem]}
+                >
+                  <Text style={[type.button, { color: colors.accentInk }]}>
+                    {copiedId ? "copied" : "copy UPI ID & open app"}
+                  </Text>
                 </Pressable>
               </View>
+              {(parsed.amount || isMerchantUpi(parsed.upi)) ? (
+                <View style={styles.buttonRow}>
+                  {parsed.amount ? (
+                    <CopyButton
+                      get={() => String(parsed.amount ?? "")}
+                      label="copy amount"
+                      style={styles.buttonRowItem}
+                    />
+                  ) : null}
+                  {isMerchantUpi(parsed.upi) ? (
+                    <Pressable onPress={payWithUpi} style={[styles.button, styles.buttonRowItem]}>
+                      <Text style={[type.button, { color: colors.accentInk }]}>try direct UPI link</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
               <View style={styles.buttonRow}>
-                <CopyButton
-                  get={() => parsed.upi.pa}
-                  label="copy UPI ID"
-                  style={styles.buttonRowItem}
-                />
-                {parsed.amount ? (
-                  <CopyButton
-                    get={() => String(parsed.amount ?? "")}
-                    label="copy amount"
-                    style={styles.buttonRowItem}
-                  />
-                ) : null}
                 <CopyButton
                   get={() => parsed.link}
                   label="copy link"
                   style={styles.buttonRowItem}
                 />
               </View>
-              {isPersonalUpi(parsed.upi) ? (
-                <Text style={[type.muted, { marginTop: 8 }]}>
-                  NPCI restricts direct links for personal accounts. Copy the UPI ID to paste in your UPI app.
-                </Text>
-              ) : null}
+              <Text style={[type.muted, styles.upiNoticeText]}>
+                {isPersonalUpi(parsed.upi)
+                  ? "Scan the QR code above with Google Pay, PhonePe or Paytm camera, or copy the UPI ID and paste it in your UPI app. (NPCI blocks direct app links for personal accounts)."
+                  : "Scan the QR code or tap 'pay with upi' on your phone to complete payment."}
+              </Text>
             </View>
           </View>
         ) : null}
@@ -299,8 +381,10 @@ export default function WebScreen() {
                 numberOfLines={2}
               />
               <View style={styles.buttonRow}>
-                <Pressable onPress={copySms} style={styles.button}>
-                  <Text style={[type.button, { color: colors.accentInk }]}>copy sms</Text>
+                <Pressable onPress={copySms} style={[styles.button, smsCopied && styles.buttonCopied]}>
+                  <Text style={[type.button, { color: colors.accentInk }]}>
+                    {smsCopied ? "copied" : "copy sms"}
+                  </Text>
                 </Pressable>
               </View>
               <Text style={[type.muted, styles.noteText]}>
@@ -354,6 +438,18 @@ const styles = StyleSheet.create({
   },
   sectionNote: {
     marginBottom: space.md,
+  },
+  prominentAmountBlock: {
+    alignItems: "center",
+    gap: 2,
+    marginBottom: space.xs,
+  },
+  prominentAmount: {
+    fontFamily: fonts.semibold,
+    fontSize: 32,
+    lineHeight: 38,
+    color: colors.text,
+    fontVariant: ["tabular-nums"],
   },
   card: {
     gap: space.md,

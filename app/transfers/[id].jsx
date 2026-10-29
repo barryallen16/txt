@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -31,6 +31,7 @@ import { formatClock } from "../../lib/time";
 import { KIND } from "../../lib/transfer";
 import {
   buildRequestLink,
+  isMerchantUpi,
   isPersonalUpi,
   parseUpiLink,
 } from "../../lib/upi";
@@ -42,6 +43,15 @@ export default function TransferDetailScreen() {
   const insets = useSafeAreaInsets();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
+  const copiedTimer = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
   const transfer = useMemo(
     () => getTransfer(Number(id)) ?? null,
     [id],
@@ -151,24 +161,59 @@ export default function TransferDetailScreen() {
     }
   };
 
-  const copyUpiVpa = async () => {
+  const copyAndOpenUpi = async () => {
     if (!upiParsed?.pa) return;
     const ok = await copyText(upiParsed.pa);
-    showToast({
-      message: ok
-        ? `UPI ID ${upiParsed.pa} copied. Paste in Google Pay, PhonePe or Paytm.`
-        : "Could not copy the UPI ID.",
-      type: ok ? "info" : "danger",
-    });
+    if (ok) {
+      setCopiedField("vpa");
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedField(null), 1800);
+      showToast({
+        message: `UPI ID ${upiParsed.pa} copied. Opening UPI app...`,
+        type: "info",
+      });
+    }
+    try {
+      if (transfer?.payload) {
+        await Linking.openURL(transfer.payload.trim());
+      } else {
+        await Linking.openURL(`upi://pay?pa=${encodeURIComponent(upiParsed.pa)}`);
+      }
+    } catch {
+      try {
+        await Linking.openURL("upi://pay");
+      } catch {
+        // Fallback when no UPI app is installed
+      }
+    }
   };
 
   const copyUpiAmount = async () => {
     if (!upiAmount) return;
     const ok = await copyText(upiAmount);
+    if (ok) {
+      setCopiedField("amt");
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedField(null), 1800);
+    }
     showToast({
       message: ok
         ? `Amount \u20B9${upiAmount} copied. Paste it in your UPI app.`
         : "Could not copy the amount.",
+      type: ok ? "info" : "danger",
+    });
+  };
+
+  const copyTextMessage = async () => {
+    if (!transfer?.payload) return;
+    const ok = await copyText(transfer.payload);
+    if (ok) {
+      setCopiedField("text");
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedField(null), 1800);
+    }
+    showToast({
+      message: ok ? "Message copied." : "Could not copy message.",
       type: ok ? "info" : "danger",
     });
   };
@@ -254,15 +299,23 @@ export default function TransferDetailScreen() {
 
                 <View style={styles.upiButtons}>
                   <AppButton
-                    label="Copy UPI ID"
+                    label={
+                      copiedField === "vpa"
+                        ? "Copied! Opening UPI..."
+                        : "Copy UPI ID & open app"
+                    }
                     icon="copy"
                     variant="primary"
-                    onPress={copyUpiVpa}
+                    onPress={copyAndOpenUpi}
                     style={styles.actionButton}
                   />
                   {upiAmount ? (
                     <AppButton
-                      label={`Copy \u20B9${upiAmount}`}
+                      label={
+                        copiedField === "amt"
+                          ? "Copied"
+                          : `Copy \u20B9${upiAmount}`
+                      }
                       icon="rupee"
                       variant="outline"
                       onPress={copyUpiAmount}
@@ -271,13 +324,15 @@ export default function TransferDetailScreen() {
                   ) : null}
                 </View>
 
-                <AppButton
-                  label="Try direct UPI link"
-                  icon="arrow-right"
-                  variant="outline"
-                  onPress={() => openUpiPayment(transfer.payload)}
-                  style={styles.actionButton}
-                />
+                {isMerchantUpi(upiParsed) ? (
+                  <AppButton
+                    label="Try direct UPI link"
+                    icon="arrow-right"
+                    variant="outline"
+                    onPress={() => openUpiPayment(transfer.payload)}
+                    style={styles.actionButton}
+                  />
+                ) : null}
               </View>
 
             ) : null}
@@ -285,7 +340,16 @@ export default function TransferDetailScreen() {
         ) : null}
 
         {transfer.kind === KIND.TEXT ? (
-          <Text style={[type.body, styles.wrap]}>{transfer.payload}</Text>
+          <View style={styles.textBlock}>
+            <Text style={[type.body, styles.wrap]}>{transfer.payload}</Text>
+            <AppButton
+              label={copiedField === "text" ? "Copied" : "Copy message"}
+              icon="copy"
+              variant="outline"
+              onPress={copyTextMessage}
+              style={styles.textCopyButton}
+            />
+          </View>
         ) : null}
 
         {transfer.kind === KIND.LOCATION && trail ? (
@@ -477,6 +541,12 @@ const styles = StyleSheet.create({
   },
   wrap: {
     flexWrap: "wrap",
+  },
+  textBlock: {
+    gap: space.md,
+  },
+  textCopyButton: {
+    alignSelf: "flex-start",
   },
   actionButton: {
     alignSelf: "stretch",
