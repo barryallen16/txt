@@ -186,11 +186,15 @@ class OffTxtSmsModule : Module() {
           "${ContactsContract.CommonDataKinds.Phone.IS_PRIMARY} DESC"
       )?.use { cursor ->
         val idIndex =
-          cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
+          cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
         val nameIndex =
-          cursor.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY)
+          cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY).let {
+            if (it != -1) it else cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+          }
         val numberIndex =
-          cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)
+          cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+
+        if (idIndex == -1 || numberIndex == -1) return@use
 
         while (cursor.moveToNext() && rows.size < 5000) {
           val id = cursor.getLong(idIndex).toString()
@@ -199,7 +203,7 @@ class OffTxtSmsModule : Module() {
           val number = (cursor.getString(numberIndex) ?: "").trim()
           // Contacts saved without a name use the formatted number as their
           // display name. Keep them so the picker can still reach them.
-          val name = (cursor.getString(nameIndex) ?: "").trim().ifEmpty { number }
+          val name = if (nameIndex != -1) (cursor.getString(nameIndex) ?: "").trim().ifEmpty { number } else number
           if (number.isEmpty()) continue
 
           seen.add(id)

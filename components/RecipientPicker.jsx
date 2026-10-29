@@ -51,10 +51,15 @@ export default function RecipientPicker({
         return;
       }
 
-      setContacts(await loadPhoneContacts());
-      setFavorites(
-        new Set(listFavorites().map((favorite) => favorite.number)),
-      );
+      const contactsList = await loadPhoneContacts();
+      setContacts(contactsList);
+      try {
+        setFavorites(
+          new Set(listFavorites().map((favorite) => favorite.number)),
+        );
+      } catch {
+        setFavorites(new Set());
+      }
       setState("granted");
     } catch {
       setState("failed");

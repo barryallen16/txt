@@ -292,7 +292,7 @@ export default function WebScreen() {
                   <Text style={[type.button, { color: colors.accentInk }]}>copy sms</Text>
                 </Pressable>
               </View>
-              <Text style={[muted, styles.noteText]}>
+              <Text style={[type.muted, styles.noteText]}>
                 open your sms app, paste this into a new message and send it to
                 the payee.
               </Text>
@@ -315,6 +315,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   content: {
+    flexGrow: 1,
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
     padding: space.lg,
     gap: space.md,
     paddingBottom: space.xxl,

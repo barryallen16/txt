@@ -79,8 +79,20 @@ export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS !== "web") return undefined;
     const style = document.createElement("style");
-    style.textContent =
-      `*:focus-visible { outline: 2px solid ${colors.accent} !important; outline-offset: 2px; }`;
+    style.textContent = `
+      html, body, #root {
+        background-color: ${colors.bg} !important;
+        color-scheme: dark;
+      }
+      body {
+        overflow-x: hidden;
+        overscroll-behavior-y: none;
+      }
+      *:focus-visible {
+        outline: 2px solid ${colors.accent} !important;
+        outline-offset: 2px;
+      }
+    `;
     document.head.appendChild(style);
     return () => style.remove();
   }, []);

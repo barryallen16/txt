@@ -30,6 +30,11 @@ const basenameScript = [
   "  </script>",
 ].join("\n") + "\n";
 
+const themeMeta = [
+  '  <meta name="theme-color" content="#0b0c10" />',
+  '  <meta name="color-scheme" content="dark" />',
+].join("\n") + "\n";
+
 const manifestLink =
   '  <link rel="manifest" href="./manifest.json" />\n';
 const iosMeta = [
@@ -58,9 +63,21 @@ let html = fs.readFileSync(path.join(distDir, "index.html"), "utf8");
 // Relativize asset paths.
 html = relativizeUrls(html);
 
+// Ensure the root document canvas matches the app's dark theme so that overscroll
+// bounce, dynamic browser address bar resize, and safe areas never flash white.
+html = html.replace(
+  /html,\s*body\s*\{[^}]*\}/,
+  'html,\n      body {\n        height: 100%;\n        background-color: #0b0c10;\n        color-scheme: dark;\n      }\n      body {\n        overflow-x: hidden;\n        overscroll-behavior-y: none;\n      }'
+);
+html = html.replace(
+  /#root\s*\{[^}]*\}/,
+  '#root {\n        display: flex;\n        height: 100%;\n        flex: 1;\n        background-color: #0b0c10;\n      }'
+);
+
 // Inject manifest + iOS meta tags before </head>.
 if (!html.includes('rel="manifest"')) {
-  html = html.replace("</head>", manifestLink + iosMeta + "</head>");
+  html = html.replace("</head>", themeMeta + manifestLink + iosMeta + "</head>");
+  html = html.replace("shrink-to-fit=no", "shrink-to-fit=no, viewport-fit=cover");
 }
 
 // Inject basename script + service worker registration before </body>.

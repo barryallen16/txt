@@ -66,10 +66,15 @@ export default function RecipientsScreen() {
         return;
       }
 
-      setContacts(await loadPhoneContacts());
-      setFavorites(
-        new Set(listFavorites().map((favorite) => favorite.number)),
-      );
+      const contactsList = await loadPhoneContacts();
+      setContacts(contactsList);
+      try {
+        setFavorites(
+          new Set(listFavorites().map((favorite) => favorite.number)),
+        );
+      } catch {
+        setFavorites(new Set());
+      }
       setContactsState("granted");
     } catch {
       setContactsState("failed");

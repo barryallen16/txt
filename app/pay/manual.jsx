@@ -28,7 +28,6 @@ import {
 
 export default function ManualPayRequestScreen() {
   const [payee, setPayee] = useState("");
-  const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -37,7 +36,7 @@ export default function ManualPayRequestScreen() {
   const [search, setSearch] = useState("");
 
   const amountCheck = validateAmount(amount, null);
-  // The link stays minimal: only the payee address. The amount, name and
+  // The link stays minimal: only the payee address. The amount and
   // note travel in the SMS text, never inside the link.
   const mobileCheck = buildMobilePaymentLink({ mobileOrVpa: payee });
 
@@ -55,7 +54,6 @@ export default function ManualPayRequestScreen() {
       params: {
         link: encodeLinkParam(mobileCheck.link),
         amount: amountCheck.amount,
-        name: name.trim(),
         note: note.trim(),
       },
     });
@@ -79,9 +77,6 @@ export default function ManualPayRequestScreen() {
 
   const selectContact = (contact) => {
     setPayee(contact.number);
-    if (!name && contact.name) {
-      setName(contact.name);
-    }
     setPickerOpen(false);
   };
 
@@ -135,17 +130,7 @@ export default function ManualPayRequestScreen() {
             ) : null}
           </View>
 
-          <View style={styles.section}>
-            <Text style={type.label}>PAYEE NAME (OPTIONAL)</Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="e.g. Jayadithya"
-              placeholderTextColor={colors.muted}
-              style={[type.body, styles.input]}
-              accessibilityLabel="Payee display name"
-            />
-          </View>
+          
 
           <View style={styles.amountBlock}>
             <Text style={[type.label, styles.amountLabel]}>AMOUNT</Text>
