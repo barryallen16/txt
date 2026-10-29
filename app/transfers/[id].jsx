@@ -31,6 +31,7 @@ import { formatClock } from "../../lib/time";
 import { KIND } from "../../lib/transfer";
 import {
   buildRequestLink,
+  isPersonalUpi,
   parseUpiLink,
 } from "../../lib/upi";
 import { copyText } from "../../lib/clipboard";
@@ -49,7 +50,13 @@ export default function TransferDetailScreen() {
 
   // Open the link byte-for-byte as it arrived - nothing is rewritten here.
   // buildRequestLink now only validates and reads the amount back.
-  const upiAmount = transfer && parseUpiLink(transfer.payload ?? "").valid
+  const upiParsed = useMemo(() => {
+    if (!transfer || transfer.kind !== KIND.QR) return null;
+    const parsed = parseUpiLink(transfer.payload ?? "");
+    return parsed.valid ? parsed : null;
+  }, [transfer]);
+
+  const upiAmount = upiParsed
     ? buildRequestLink(transfer.payload).amount
     : null;
 
@@ -144,6 +151,17 @@ export default function TransferDetailScreen() {
     }
   };
 
+  const copyUpiVpa = async () => {
+    if (!upiParsed?.pa) return;
+    const ok = await copyText(upiParsed.pa);
+    showToast({
+      message: ok
+        ? `UPI ID ${upiParsed.pa} copied. Paste in Google Pay, PhonePe or Paytm.`
+        : "Could not copy the UPI ID.",
+      type: ok ? "info" : "danger",
+    });
+  };
+
   const copyUpiAmount = async () => {
     if (!upiAmount) return;
     const ok = await copyText(upiAmount);
@@ -223,24 +241,45 @@ export default function TransferDetailScreen() {
             <Text style={[type.body, styles.wrap]}>
               {summariseQr(transfer.payload)}
             </Text>
-            {parseUpiLink(transfer.payload).valid ? (
-              <>
+            {upiParsed ? (
+              <View style={styles.upiActionsBlock}>
+                {isPersonalUpi(upiParsed) ? (
+                  <View style={styles.upiNotice}>
+                    <PixelIcon name="info" size={16} color={colors.accent} />
+                    <Text style={[type.muted, styles.upiNoticeText]}>
+                      NPCI restricts direct app links for personal accounts. Point another phone's camera at this QR code to pay, or copy the UPI ID below to pay from this device.
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.upiButtons}>
+                  <AppButton
+                    label="Copy UPI ID"
+                    icon="copy"
+                    variant="primary"
+                    onPress={copyUpiVpa}
+                    style={styles.actionButton}
+                  />
+                  {upiAmount ? (
+                    <AppButton
+                      label={`Copy \u20B9${upiAmount}`}
+                      icon="rupee"
+                      variant="outline"
+                      onPress={copyUpiAmount}
+                      style={styles.actionButton}
+                    />
+                  ) : null}
+                </View>
+
                 <AppButton
-                  label="Pay with UPI"
+                  label="Try direct UPI link"
                   icon="arrow-right"
+                  variant="outline"
                   onPress={() => openUpiPayment(transfer.payload)}
                   style={styles.actionButton}
                 />
-                {upiAmount ? (
-                  <AppButton
-                    label={`Copy \u20B9${upiAmount}`}
-                    icon="rupee"
-                    variant="outline"
-                    onPress={copyUpiAmount}
-                    style={styles.actionButton}
-                  />
-                ) : null}
-              </>
+              </View>
+
             ) : null}
           </View>
         ) : null}
@@ -441,6 +480,31 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     alignSelf: "stretch",
+    flex: 1,
+  },
+  upiActionsBlock: {
+    alignSelf: "stretch",
+    gap: space.sm,
+    marginTop: space.sm,
+  },
+  upiButtons: {
+    flexDirection: "row",
+    gap: space.sm,
+  },
+  upiNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: space.sm,
+    padding: space.sm,
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius,
+  },
+  upiNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
   },
   locationBlock: {
     gap: space.md,

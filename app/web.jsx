@@ -19,6 +19,7 @@ import {
   extractRequestAmount,
   extractUpiLink,
   normalizeAmount,
+  isPersonalUpi,
   parseUpiLink,
   validateAmount,
 } from "../lib/upi";
@@ -202,6 +203,11 @@ export default function WebScreen() {
                 </Pressable>
               </View>
               <View style={styles.buttonRow}>
+                <CopyButton
+                  get={() => parsed.upi.pa}
+                  label="copy UPI ID"
+                  style={styles.buttonRowItem}
+                />
                 {parsed.amount ? (
                   <CopyButton
                     get={() => String(parsed.amount ?? "")}
@@ -215,6 +221,11 @@ export default function WebScreen() {
                   style={styles.buttonRowItem}
                 />
               </View>
+              {isPersonalUpi(parsed.upi) ? (
+                <Text style={[type.muted, { marginTop: 8 }]}>
+                  NPCI restricts direct links for personal accounts. Copy the UPI ID to paste in your UPI app.
+                </Text>
+              ) : null}
             </View>
           </View>
         ) : null}
