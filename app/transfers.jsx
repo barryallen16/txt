@@ -162,6 +162,11 @@ export default function TransfersScreen() {
           ) : (
             <View style={styles.headerActions}>
               <IconButton
+                icon="send"
+                label="Send something"
+                onPress={() => router.push("/share")}
+              />
+              <IconButton
                 icon="message-text"
                 label="Payment requests"
                 onPress={() => router.push("/sms-payments")}

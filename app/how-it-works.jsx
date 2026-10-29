@@ -122,6 +122,21 @@ export default function HowItWorksScreen() {
             router.replace("/permissions");
           }}
         />
+        {!firstRun ? (
+          <Pressable
+            onPress={() => router.push("/permissions")}
+            accessibilityRole="button"
+            accessibilityLabel="Open permission settings"
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.permLink,
+              pressed && styles.permLinkPressed,
+            ]}
+          >
+            <PixelIcon name="shield" size={16} color={colors.muted} />
+            <Text style={type.label}>PERMISSIONS</Text>
+          </Pressable>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -173,8 +188,20 @@ const styles = StyleSheet.create({
     color: colors.accent,
   },
   footer: {
+    gap: space.sm,
     padding: space.lg,
     borderTopWidth: 1,
     borderTopColor: colors.line,
+  },
+  permLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.sm,
+    paddingVertical: space.sm,
+    borderRadius: radius,
+  },
+  permLinkPressed: {
+    backgroundColor: colors.line,
   },
 });

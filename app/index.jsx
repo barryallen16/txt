@@ -158,16 +158,6 @@ export default function ScannerScreen() {
               onPress={() => router.push("/how-it-works")}
             />
             <IconButton
-              icon="shield"
-              label="Permissions"
-              onPress={() => router.push("/permissions")}
-            />
-            <IconButton
-              icon="send"
-              label="Send something"
-              onPress={() => router.push("/share")}
-            />
-            <IconButton
               icon="inbox"
               label="Open shared items"
               onPress={() => router.push("/transfers")}
@@ -298,7 +288,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: space.xs,
   },
   setupBanner: {
     flexDirection: "row",
