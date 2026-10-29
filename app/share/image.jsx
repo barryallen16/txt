@@ -15,6 +15,7 @@ import AppButton from "../../components/AppButton";
 import AppHeader from "../../components/AppHeader";
 import PixelIcon from "../../components/PixelIcon";
 import RecipientPicker from "../../components/RecipientPicker";
+import { useToast } from "../../components/Toast";
 import { saveTransfer } from "../../lib/db";
 import {
   COMPRESSION_PRESETS,
@@ -38,6 +39,8 @@ export default function ImageShareScreen() {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(null);
+
+  const showToast = useToast();
 
   const compressionRun = useRef(0);
   const preset = getCompressionPreset(presetId);
@@ -125,6 +128,7 @@ export default function ImageShareScreen() {
           receivedAt: Date.now(),
         });
         setStatus("sent");
+        showToast({ message: "Picture sent" });
         setPhoto(null);
         setSource(null);
       } else {

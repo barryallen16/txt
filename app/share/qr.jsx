@@ -17,6 +17,7 @@ import AppHeader from "../../components/AppHeader";
 import Loading from "../../components/Loading";
 import PixelIcon from "../../components/PixelIcon";
 import RecipientPicker from "../../components/RecipientPicker";
+import { useToast } from "../../components/Toast";
 import { saveTransfer } from "../../lib/db";
 import { classifyQr, normaliseQr, summariseQr } from "../../lib/qr";
 import { ensureSendPermission, sendParts } from "../../lib/sms";
@@ -36,6 +37,8 @@ export default function QrShareScreen() {
     AppState.currentState !== "background",
   );
   const scanLock = useRef(false);
+
+  const showToast = useToast();
 
   const check = normaliseQr(text);
 
@@ -98,6 +101,7 @@ export default function QrShareScreen() {
           receivedAt: Date.now(),
         });
         setSent(true);
+        showToast({ message: "QR code sent" });
       } else {
         setError(result.reason ?? "The message did not leave the phone.");
       }

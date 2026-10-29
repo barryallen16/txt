@@ -7,6 +7,7 @@ import AppButton from "../../components/AppButton";
 import AppHeader from "../../components/AppHeader";
 import PixelIcon from "../../components/PixelIcon";
 import RecipientPicker from "../../components/RecipientPicker";
+import { useToast } from "../../components/Toast";
 import { saveTransfer } from "../../lib/db";
 import { encodeLocation, formatAge, newSessionId } from "../../lib/geo";
 import { requestLocationAccess, shareLocation } from "../../lib/locationShare";
@@ -22,6 +23,8 @@ export default function CurrentLocationScreen() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(null);
   const [error, setError] = useState(null);
+
+  const showToast = useToast();
 
   const send = async () => {
     if (!recipient?.number || sending) return;
@@ -83,6 +86,7 @@ export default function CurrentLocationScreen() {
           receivedAt: Date.now(),
         });
         setSent({ fix, at: Date.now() });
+        showToast({ message: "Location sent" });
       } else {
         setError(result.reason ?? "The message did not leave the phone.");
       }

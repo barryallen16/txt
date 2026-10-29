@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import { colors, fontFiles } from "../lib/theme";
 import { getMeta } from "../lib/db";
 import { syncInbox } from "../lib/syncInbox";
+import { ToastProvider } from "../components/Toast";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -167,7 +168,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <>
+    <ToastProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -175,6 +176,6 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       />
-    </>
+    </ToastProvider>
   );
 }

@@ -6,6 +6,7 @@ import AppButton from "../../components/AppButton";
 import AppHeader from "../../components/AppHeader";
 import PixelIcon from "../../components/PixelIcon";
 import RecipientPicker from "../../components/RecipientPicker";
+import { useToast } from "../../components/Toast";
 import { formatAge, newSessionId } from "../../lib/geo";
 import { requestLocationAccess } from "../../lib/locationShare";
 import {
@@ -31,6 +32,8 @@ export default function LocationShareScreen() {
   const [last, setLast] = useState(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
+
+  const showToast = useToast();
 
   const mounted = useRef(true);
   const poll = useRef(null);
@@ -123,6 +126,7 @@ export default function LocationShareScreen() {
       setRunning(true);
       refresh();
       startPolling();
+      showToast({ message: "Live location started" });
     } catch (failure) {
       setError(failure?.message ?? "Could not start sharing.");
     } finally {
@@ -133,6 +137,7 @@ export default function LocationShareScreen() {
   const stop = async () => {
     stopPolling();
     setRunning(false);
+    showToast({ message: "Live location stopped" });
     await stopLocationShare();
     refresh();
   };
