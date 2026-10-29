@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import { Stack, router, useRootNavigationState } from "expo-router";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
@@ -72,6 +72,18 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, fontError]);
+
+  // Web accessibility floor: every keyboard-focusable element needs a visible
+  // focus ring. React Native Web suppresses outlines, so add one back while
+  // keeping :focus-visible (readonly pointer focus stays clean).
+  useEffect(() => {
+    if (Platform.OS !== "web") return undefined;
+    const style = document.createElement("style");
+    style.textContent =
+      `*:focus-visible { outline: 2px solid ${colors.accent} !important; outline-offset: 2px; }`;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
