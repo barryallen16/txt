@@ -31,7 +31,7 @@ const OPTIONS = [
     href: "/share/qr",
   },
   {
-    icon: "message-text",
+    icon: "rupee",
     title: "Payment request",
     detail: "Request money to a mobile number or UPI ID without a QR code.",
     href: "/pay/manual",
