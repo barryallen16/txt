@@ -29,10 +29,8 @@ import {
   toDate,
 } from "../lib/db";
 import { syncInbox, INBOX_SYNCED_EVENT } from "../lib/syncInbox";
-import { isPhoneSender } from "../lib/sender";
 import { dayLabel } from "../lib/time";
 import {
-  buildMobilePaymentLink,
   buildRequestLink,
   normalizeAmount,
   parseUpiLink,
@@ -186,29 +184,6 @@ export default function SmsPaymentsScreen() {
       await Linking.openURL(link);
     } catch {
       setError("No UPI app could open this request.");
-    } finally {
-      setPayingId(null);
-    }
-  };
-
-  const payMobile = async (item) => {
-    if (!item.sender) return;
-
-    setError(null);
-    setPayingId(`${item.id}:mobile`);
-    try {
-      const res = buildMobilePaymentLink({
-        mobileOrVpa: item.sender,
-        amount: item.amount,
-        name: item.payee_name,
-      });
-      if (res.valid && res.link) {
-        await Linking.openURL(res.link);
-      } else {
-        setError(res.reason ?? "Invalid mobile number.");
-      }
-    } catch {
-      setError("No UPI app could open this payment.");
     } finally {
       setPayingId(null);
     }
@@ -446,20 +421,6 @@ export default function SmsPaymentsScreen() {
                       disabled={working || !item.upi_link}
                       onPress={() => pay(item)}
                     />
-                    {isPhoneSender(item.sender) ? (
-                      <AppButton
-                        label={
-                          payingId === `${item.id}:mobile`
-                            ? "Opening UPI"
-                            : `Pay to mobile (${item.sender})`
-                        }
-                        icon="phone"
-                        variant="outline"
-                        loading={payingId === `${item.id}:mobile`}
-                        disabled={working || paying}
-                        onPress={() => payMobile(item)}
-                      />
-                    ) : null}
                     <View style={styles.actions}>
                       <AppButton
                         label="Mark done"
