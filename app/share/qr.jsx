@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 import {
   AppState,
   Linking,
@@ -27,6 +28,11 @@ import { KIND, encodeTransfer } from "../../lib/transfer";
 import { colors, radius, space, type } from "../../lib/theme";
 
 export default function QrShareScreen() {
+  if (Platform.OS === "web") {
+    router.replace("/web");
+    return null;
+  }
+
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [mode, setMode] = useState("scan");
   const [text, setText] = useState("");

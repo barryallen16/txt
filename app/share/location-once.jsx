@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Platform } from "react-native";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
@@ -19,6 +20,11 @@ import { KIND } from "../../lib/transfer";
 const FIX_TIMEOUT_MS = 20_000;
 
 export default function CurrentLocationScreen() {
+  if (Platform.OS === "web") {
+    router.replace("/web");
+    return null;
+  }
+
   const [recipient, setRecipient] = useState(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(null);

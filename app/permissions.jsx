@@ -42,6 +42,11 @@ function readFirstRun() {
 }
 
 export default function PermissionsScreen() {
+  if (Platform.OS === "web") {
+    router.replace("/web");
+    return null;
+  }
+
   const [firstRun] = useState(readFirstRun);
   const [snapshot, setSnapshot] = useState(null);
   const [checking, setChecking] = useState(true);

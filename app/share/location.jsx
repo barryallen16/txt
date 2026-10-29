@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -25,6 +26,11 @@ const INTERVALS = [
 ];
 
 export default function LocationShareScreen() {
+  if (Platform.OS === "web") {
+    router.replace("/web");
+    return null;
+  }
+
   const [recipient, setRecipient] = useState(null);
   const [intervalSec, setIntervalSec] = useState(60);
   const [running, setRunning] = useState(false);

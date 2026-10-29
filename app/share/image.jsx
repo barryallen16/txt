@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { Platform } from "react-native";
 import {
   ActivityIndicator,
   Image,
@@ -31,6 +32,11 @@ import { colors, radius, space, type } from "../../lib/theme";
 import { KIND } from "../../lib/transfer";
 
 export default function ImageShareScreen() {
+  if (Platform.OS === "web") {
+    router.replace("/web");
+    return null;
+  }
+
   const [recipient, setRecipient] = useState(null);
   const [presetId, setPresetId] = useState(DEFAULT_PRESET);
   const [source, setSource] = useState(null);

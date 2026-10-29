@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppState,
   Linking,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -20,6 +21,11 @@ import { getPermissionSnapshot, needsSetup } from "../lib/permissions";
 import { encodeLinkParam, normalizeAmount, parseUpiLink } from "../lib/upi";
 
 export default function ScannerScreen() {
+  if (Platform.OS === "web") {
+    router.replace("/web");
+    return null;
+  }
+
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [facing, setFacing] = useState("back");
   const [scanned, setScanned] = useState(false);
