@@ -45,5 +45,8 @@ yarn-error.*
 # local expo module build output
 modules/*/android/build/
 
+# local gh-pages deploy worktree (.gh-pages/gh-pages-commit.js)
+.gh-pages/
+
 # bun binary lockfile (replaced by bun.lock)
 /bun.lockb

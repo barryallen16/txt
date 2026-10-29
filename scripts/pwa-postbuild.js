@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
@@ -68,6 +69,19 @@ if (!html.includes('window.location.replace')) {
 }
 
 fs.writeFileSync(path.join(distDir, "index.html"), html);
+
+// Stamp the service worker cache with a hash of the built shell. index.html
+// references content-hashed bundles, so any code change changes its bytes
+// and gets a new cache name - installed PWAs then pick up the update.
+const swPath = path.join(distDir, "sw.js");
+if (fs.existsSync(swPath)) {
+  const digest = crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(path.join(distDir, "index.html")))
+    .digest("hex")
+    .slice(0, 12);
+  fs.writeFileSync(swPath, fs.readFileSync(swPath, "utf8").replace("%CACHE_NAME%", digest));
+}
 
 // 404.html fallback: GitHub Pages serves it for unknown routes (e.g. /txt/web).
 // It is a full copy of index.html, so the basename script runs and Expo Router

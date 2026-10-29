@@ -21,11 +21,9 @@ import { getPermissionSnapshot, needsSetup } from "../lib/permissions";
 import { encodeLinkParam, normalizeAmount, parseUpiLink } from "../lib/upi";
 
 export default function ScannerScreen() {
-  if (Platform.OS === "web") {
-    router.replace("/web");
-    return null;
-  }
-
+  // Redirect the web build in an effect, never during render: render-time
+  // navigation runs before the navigator mounts and silently no-ops.
+  const isWeb = Platform.OS === "web";
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [facing, setFacing] = useState("back");
   const [scanned, setScanned] = useState(false);
@@ -38,6 +36,12 @@ export default function ScannerScreen() {
   );
   const scanLock = useRef(false);
   const navTimer = useRef(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isWeb) router.replace("/web");
+    }, [isWeb]),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -130,6 +134,10 @@ export default function ScannerScreen() {
     setError(null);
     setScanned(false);
   };
+
+  // Native-only screen: the web build lands on /web. Placed after every hook
+  // so Rules of Hooks stay intact across the platform branch.
+  if (isWeb) return null;
 
   const setupNeeded = needsSetup(setup);
   const pausedLabel = scanned
