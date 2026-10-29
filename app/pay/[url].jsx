@@ -15,7 +15,6 @@ import AppHeader from "../../components/AppHeader";
 import PixelIcon from "../../components/PixelIcon";
 import { colors, radius, space, type } from "../../lib/theme";
 import {
-  buildRequestLink,
   decodeLinkParam,
   encodeLinkParam,
   normalizeAmount,
@@ -29,10 +28,11 @@ export default function AmountScreen() {
   const parsed = useMemo(() => parseUpiLink(link), [link]);
   const [amount, setAmount] = useState("");
 
+  // The link travels exactly as scanned. The amount lives in the UI and the
+  // SMS text, never inside the link.
   const linkAmount = normalizeAmount(parsed.am);
   const hasAmountInLink = parsed.valid && linkAmount != null;
   const check = validateAmount(amount, parsed.mam);
-  const willStripSignature = parsed.valid && parsed.signed && !hasAmountInLink;
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -41,10 +41,12 @@ export default function AmountScreen() {
 
   const continueToRecipients = () => {
     if (!hasAmountInLink && !check.valid) return;
-    const { link: requestLink } = buildRequestLink(link, check.amount);
     router.push({
       pathname: "/recipients",
-      params: { link: encodeLinkParam(requestLink) },
+      params: {
+        link: encodeLinkParam(link.trim()),
+        amount: hasAmountInLink ? linkAmount : check.amount,
+      },
     });
   };
 
@@ -114,15 +116,6 @@ export default function AmountScreen() {
 
             {!hasAmountInLink && amount.length > 0 && !check.valid ? (
               <Text style={[type.muted, styles.errorText]}>{check.reason}</Text>
-            ) : null}
-
-            {willStripSignature ? (
-              <View style={styles.notice}>
-                <PixelIcon name="shield" size={16} color={colors.muted} />
-                <Text style={[type.muted, styles.noticeText]}>
-                  Your UPI app may ask you to verify this request.
-                </Text>
-              </View>
             ) : null}
           </View>
         </ScrollView>

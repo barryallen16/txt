@@ -24,21 +24,24 @@ import { ensureSendPermission, sendParts } from "../lib/sms";
 import { colors, radius, space, type } from "../lib/theme";
 import { KIND } from "../lib/transfer";
 import {
-  buildRequestLink,
   buildRequestText,
   decodeLinkParam,
+  normalizeAmount,
   parseUpiLink,
 } from "../lib/upi";
 
 export default function RecipientsScreen() {
-  const { link } = useLocalSearchParams();
+  const { link, amount, name, note } = useLocalSearchParams();
   const requestLink = decodeLinkParam(typeof link === "string" ? link : "");
   const parsed = useMemo(() => parseUpiLink(requestLink), [requestLink]);
-  const payable = useMemo(
-    () => buildRequestLink(requestLink, parsed.am),
-    [requestLink, parsed.am],
-  );
-  const requestAmount = payable.amount;
+  // The link is sent exactly as scanned - only its parameters are read back.
+  // The amount comes from the amount screen param or from the link itself.
+  const payable = requestLink.trim();
+  const requestAmount =
+    normalizeAmount(typeof amount === "string" ? amount : "") ||
+    normalizeAmount(parsed.am);
+  const payeeName = typeof name === "string" && name.trim() ? name.trim() : null;
+  const payeeNote = typeof note === "string" && note.trim() ? note.trim() : null;
 
   const [contactsState, setContactsState] = useState("loading");
   const [canAskContacts, setCanAskContacts] = useState(true);
@@ -171,7 +174,9 @@ export default function RecipientsScreen() {
     const numbers = [
       ...new Set(selectedContacts.map((contact) => contact.number)),
     ];
-    const message = buildRequestText(payable.link, requestAmount ?? "");
+    const message = payeeNote
+      ? `${buildRequestText(payable, requestAmount ?? "")} (${payeeNote})`
+      : buildRequestText(payable, requestAmount ?? "");
 
     setSending(true);
     setStatus(null);
@@ -203,7 +208,7 @@ export default function RecipientsScreen() {
               transferKey: `req_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
               kind: KIND.QR,
               recipient: recipientLabel,
-              payload: payable.link,
+              payload: payable,
               direction: "sent",
               receivedAt: Date.now(),
             });
@@ -269,12 +274,13 @@ export default function RecipientsScreen() {
         <View style={styles.summary}>
           <Text style={type.label}>REQUEST</Text>
           <Text style={type.bodyMedium} numberOfLines={1}>
-            {parsed.pn || parsed.pa}
+            {payeeName || parsed.pn || parsed.pa}
           </Text>
           <Text style={type.muted}>
             {requestAmount
               ? `Pay Rs ${requestAmount} · ${parsed.pa}`
               : parsed.pa}
+            {payeeNote ? ` · ${payeeNote}` : ""}
           </Text>
         </View>
 

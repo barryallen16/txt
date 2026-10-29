@@ -37,12 +37,9 @@ export default function ManualPayRequestScreen() {
   const [search, setSearch] = useState("");
 
   const amountCheck = validateAmount(amount, null);
-  const mobileCheck = buildMobilePaymentLink({
-    mobileOrVpa: payee,
-    amount: amountCheck.valid ? amountCheck.amount : null,
-    name,
-    note,
-  });
+  // The link stays minimal: only the payee address. The amount, name and
+  // note travel in the SMS text, never inside the link.
+  const mobileCheck = buildMobilePaymentLink({ mobileOrVpa: payee });
 
   const canContinue = mobileCheck.valid && amountCheck.valid;
 
@@ -55,7 +52,12 @@ export default function ManualPayRequestScreen() {
     if (!canContinue || !mobileCheck.link) return;
     router.push({
       pathname: "/recipients",
-      params: { link: encodeLinkParam(mobileCheck.link) },
+      params: {
+        link: encodeLinkParam(mobileCheck.link),
+        amount: amountCheck.amount,
+        name: name.trim(),
+        note: note.trim(),
+      },
     });
   };
 
@@ -186,8 +188,8 @@ export default function ManualPayRequestScreen() {
           <View style={styles.notice}>
             <PixelIcon name="shield" size={16} color={colors.muted} />
             <Text style={[type.muted, styles.noticeText]}>
-              A standardized UPI Number link is generated. The recipient can pay
-              from any UPI app on their phone.
+              The request carries the mobile number and the amount as text. The
+              recipient can pay from any UPI app on their phone.
             </Text>
           </View>
         </ScrollView>
