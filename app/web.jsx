@@ -20,8 +20,9 @@ import {
   extractUpiLink,
   normalizeAmount,
   parseUpiLink,
+  validateAmount,
 } from "../lib/upi";
-import { colors, radius, space } from "../lib/theme";
+import { colors, radius, space, type } from "../lib/theme";
 import { copyText } from "../lib/clipboard";
 import { useToast } from "../components/Toast";
 
@@ -54,7 +55,9 @@ function CopyButton({ get, label, style, textStyle, showLabel = true }) {
 
   return (
     <Pressable onPress={press} style={[styles.button, copied && styles.buttonCopied, style]}>
-      <Text style={[buttonText, textStyle]}>{copied ? "copied \u2713" : label}</Text>
+      <Text style={[type.button, { color: colors.accentInk }, textStyle]}>
+        {copied ? "copied \u2713" : label}
+      </Text>
     </Pressable>
   );
 }
@@ -66,30 +69,8 @@ const TXT_LOGO = (
   </svg>
 );
 
-const heading = {
-  fontFamily: "monospace",
-  fontSize: 12,
-  letterSpacing: 1,
-  color: colors.muted,
-  textTransform: "uppercase",
-};
-const body = {
-  fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
-  fontSize: 15,
-  color: colors.text,
-};
-const bodyMedium = { ...body, fontWeight: "600" };
-const muted = {
-  fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
-  fontSize: 13,
-  color: colors.muted,
-};
-const buttonText = {
-  fontFamily: "monospace",
-  fontSize: 13,
-  letterSpacing: 1,
-  color: colors.accentInk,
-};
+// One heading style: theme label type, uppercased like the native screens.
+const head = { ...type.label, textTransform: "uppercase" };
 
 export default function WebScreen() {
   const showToast = useToast();
@@ -137,10 +118,15 @@ export default function WebScreen() {
   const [smsText, setSmsText] = useState("");
 
   const mobileCheck = buildMobilePaymentLink({ mobileOrVpa: payee });
+  // An empty amount is allowed (the naked request still works); anything
+  // typed must survive validateAmount before it lands in the SMS text.
+  const amountCheck = validateAmount(amount, null);
+  const amountReady = amount.trim() === "" ? true : amountCheck.valid;
 
   const createSms = () => {
-    if (!mobileCheck.valid || !mobileCheck.link) return;
-    const bodyText = amount ? `Pay Rs ${amount}` : "Pay";
+    if (!mobileCheck.valid || !mobileCheck.link || !amountReady) return;
+    const amountValue = amountCheck.valid ? amountCheck.amount : null;
+    const bodyText = amountValue ? `Pay Rs ${amountValue}` : "Pay";
     const base = `:txt ${bodyText} ${mobileCheck.link}`;
     setSmsText(note.trim() ? `${base} (${note.trim()})` : base);
   };
@@ -161,13 +147,13 @@ export default function WebScreen() {
         <View style={styles.brand}>
           {TXT_LOGO}
           <View style={styles.brandTextWrapper}>
-            <Text style={[muted, styles.brandSub]}>txt · web</Text>
+            <Text style={[type.muted, styles.brandSub]}>txt · web</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={[heading, styles.sectionHead]}>open a request</Text>
-          <Text style={[muted, styles.sectionNote]}>
+          <Text style={[head, styles.sectionHead]}>open a request</Text>
+          <Text style={[type.muted, styles.sectionNote]}>
             paste the ":txt pay rs ..." sms you received
           </Text>
 
@@ -182,17 +168,17 @@ export default function WebScreen() {
               style={styles.input}
             />
             {pasteText.length > 0 && !pasteCheck && !pasteError ? (
-              <Text style={[muted, styles.hint]}>no :txt payment request found.</Text>
+              <Text style={[type.muted, styles.hint]}>no :txt payment request found.</Text>
             ) : null}
             {pasteError ? (
-              <Text style={[muted, { color: colors.danger }]}>{pasteError}</Text>
+              <Text style={[type.muted, { color: colors.danger }]}>{pasteError}</Text>
             ) : null}
             <Pressable
               onPress={useRequest}
               disabled={!pasteCheck}
               style={[styles.button, !pasteCheck && styles.buttonDisabled]}
             >
-              <Text style={[buttonText, { color: !pasteCheck ? colors.muted : colors.accentInk }]}>
+              <Text style={[type.button, { color: !pasteCheck ? colors.muted : colors.accentInk }]}>
                 use request
               </Text>
             </Pressable>
@@ -201,18 +187,18 @@ export default function WebScreen() {
 
         {parsed ? (
           <View style={styles.section}>
-            <Text style={[heading, styles.sectionHead]}>payment request</Text>
+            <Text style={[head, styles.sectionHead]}>payment request</Text>
             <View style={styles.card}>
-              <Text style={[bodyMedium]}>{parsed.upi.pn || parsed.upi.pa}</Text>
-              <Text style={[muted]}>{parsed.upi.pa}</Text>
+              <Text style={type.bodyMedium}>{parsed.upi.pn || parsed.upi.pa}</Text>
+              <Text style={type.muted}>{parsed.upi.pa}</Text>
               {parsed.amount ? (
-                <Text style={[bodyMedium, { fontSize: 24 }]}>
+                <Text style={{ ...type.amountSmall, fontSize: 24 }}>
                   ₹{parsed.amount}
                 </Text>
               ) : null}
               <View style={styles.buttonRow}>
                 <Pressable onPress={payWithUpi} style={styles.button}>
-                  <Text style={buttonText}>pay with upi</Text>
+                  <Text style={[type.button, { color: colors.accentInk }]}>pay with upi</Text>
                 </Pressable>
               </View>
               <View style={styles.buttonRow}>
@@ -234,14 +220,14 @@ export default function WebScreen() {
         ) : null}
 
         <View style={styles.section}>
-          <Text style={[heading, styles.sectionHead]}>create a request</Text>
-          <Text style={[muted, styles.sectionNote]}>
+          <Text style={[head, styles.sectionHead]}>create a request</Text>
+          <Text style={[type.muted, styles.sectionNote]}>
             build the formatted sms, copy it, then send it from your phone.
           </Text>
 
           <View style={styles.card}>
             <View style={styles.field}>
-              <Text style={[heading]}>payee (mobile or upi id)</Text>
+              <Text style={[head]}>payee (mobile or upi id)</Text>
               <TextInput
                 value={payee}
                 onChangeText={setPayee}
@@ -250,12 +236,12 @@ export default function WebScreen() {
                 style={styles.input}
               />
               {payee.length > 0 && !mobileCheck.valid ? (
-                <Text style={[muted, { color: colors.danger }]}>{mobileCheck.reason}</Text>
+                <Text style={[type.muted, { color: colors.danger }]}>{mobileCheck.reason}</Text>
               ) : null}
             </View>
 
             <View style={styles.field}>
-              <Text style={[heading]}>amount (₹)</Text>
+              <Text style={[head]}>amount (₹)</Text>
               <TextInput
                 value={amount}
                 onChangeText={setAmount}
@@ -263,10 +249,13 @@ export default function WebScreen() {
                 placeholderTextColor={colors.muted}
                 style={styles.input}
               />
+              {amount.length > 0 && !amountCheck.valid ? (
+                <Text style={[type.muted, { color: colors.danger }]}>{amountCheck.reason}</Text>
+              ) : null}
             </View>
 
             <View style={styles.field}>
-              <Text style={[heading]}>note (optional)</Text>
+              <Text style={[head]}>note (optional)</Text>
               <TextInput
                 value={note}
                 onChangeText={setNote}
@@ -278,10 +267,10 @@ export default function WebScreen() {
 
             <Pressable
               onPress={createSms}
-              disabled={!mobileCheck.valid}
-              style={[styles.button, !mobileCheck.valid && styles.buttonDisabled]}
+              disabled={!mobileCheck.valid || !amountReady}
+              style={[styles.button, (!mobileCheck.valid || !amountReady) && styles.buttonDisabled]}
             >
-              <Text style={[buttonText, { color: !mobileCheck.valid ? colors.muted : colors.accentInk }]}>
+              <Text style={[type.button, { color: !mobileCheck.valid || !amountReady ? colors.muted : colors.accentInk }]}>
                 create sms
               </Text>
             </Pressable>
@@ -290,7 +279,7 @@ export default function WebScreen() {
 
         {smsText ? (
           <View style={styles.section}>
-            <Text style={[heading, styles.sectionHead]}>sms to send</Text>
+            <Text style={[head, styles.sectionHead]}>sms to send</Text>
             <View style={styles.card}>
               <TextInput
                 value={smsText}
@@ -300,7 +289,7 @@ export default function WebScreen() {
               />
               <View style={styles.buttonRow}>
                 <Pressable onPress={copySms} style={styles.button}>
-                  <Text style={buttonText}>copy sms</Text>
+                  <Text style={[type.button, { color: colors.accentInk }]}>copy sms</Text>
                 </Pressable>
               </View>
               <Text style={[muted, styles.noteText]}>
@@ -311,9 +300,9 @@ export default function WebScreen() {
           </View>
         ) : null}
 
-        <Text style={[muted, styles.footerNote]}>
+        <Text style={[type.muted, styles.footerNote]}>
           txt sends everything as plain sms. the receiver needs nothing but the
-          message — no app, no data plan.
+          message - no app, no data plan.
         </Text>
       </ScrollView>
     </SafeAreaView>
