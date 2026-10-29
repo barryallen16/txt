@@ -40,15 +40,6 @@
     <div id="root"></div>
   <script src="./_expo/static/js/web/index-c11647d7e965699cc3b01ae7e14c67de.js" defer></script>
   <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").then(() => {
-          console.log("txt SW registered");
-        });
-      });
-    }
-  </script>
-  <script>
     (function () {
       var base = "/txt";
       var p = window.location.pathname;
@@ -58,8 +49,6 @@
           window.history.replaceState(null, "", clean);
         }
       } else if (p !== "/") {
-        // Refreshed at a clean path like /web: redirect back into /txt so
-        // GitHub Pages serves 404.html and this script strips again.
         window.location.replace(base + p);
       }
     })();
