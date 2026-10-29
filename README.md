@@ -100,6 +100,22 @@ bun run typecheck # TypeScript strict mode
 
 Report bugs and feature requests at https://github.com/barryallen16/txt/issues.
 
+## Web version
+
+A web version lives at the `/web` route for people who do not have the app installed — useful for iOS users and demos. It is a PWA, so it can be added to the home screen and keeps working offline after the first visit.
+
+Build it:
+
+```
+bun run web:pwa
+```
+
+This exports a static site to `dist/`. A built copy is already on the `gh-pages` branch, so you can turn on GitHub Pages for that branch and the site is available at `https://barryallen16.github.io/txt/web`.
+
+The web version is copy-paste only: paste a received `:txt Pay Rs …` SMS to open a payment request and pay, or build a formatted SMS, copy it, and send it from your phone's SMS app. It cannot send or receive SMS, read QR codes from the camera, or share location — browsers do not give websites access to SMS, and iOS does not expose SMS at all. Those features need the native Android app.
+
+Service workers and any camera use require HTTPS. GitHub Pages serves over HTTPS, so the PWA works there; plain `http://` will not.
+
 ## License
 
 MIT
