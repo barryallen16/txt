@@ -388,11 +388,11 @@ export default function SmsPaymentsScreen() {
             return (
               <View style={styles.row}>
                 <View style={styles.rowTop}>
+                  <Text style={type.amountRow} numberOfLines={1}>
+                    {item.amount ? `₹${item.amount}` : "No amount"}
+                  </Text>
                   <Text style={[type.bodyMedium, styles.payee]} numberOfLines={1}>
                     {item.payee_name || "Unknown payee"}
-                  </Text>
-                  <Text style={type.amountSmall}>
-                    {item.amount ? `₹${item.amount}` : "No amount"}
                   </Text>
                 </View>
                 <Text style={type.muted} numberOfLines={1}>

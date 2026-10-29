@@ -229,6 +229,7 @@ export default function TransferDetailScreen() {
                   label="Pay with UPI"
                   icon="arrow-right"
                   onPress={() => openUpiPayment(transfer.payload)}
+                  style={styles.actionButton}
                 />
                 {upiAmount ? (
                   <AppButton
@@ -236,6 +237,7 @@ export default function TransferDetailScreen() {
                     icon="rupee"
                     variant="outline"
                     onPress={copyUpiAmount}
+                    style={styles.actionButton}
                   />
                 ) : null}
               </>
@@ -436,6 +438,9 @@ const styles = StyleSheet.create({
   },
   wrap: {
     flexWrap: "wrap",
+  },
+  actionButton: {
+    alignSelf: "stretch",
   },
   locationBlock: {
     gap: space.md,
