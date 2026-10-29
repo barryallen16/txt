@@ -25,6 +25,7 @@
     </style>
     <link rel="manifest" href="./manifest.json" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta name="apple-mobile-web-app-title" content="txt" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
@@ -38,18 +39,14 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="./_expo/static/js/web/index-c11647d7e965699cc3b01ae7e14c67de.js" defer></script>
+  <script src="./_expo/static/js/web/index-c9bbd9ae834ef85b80d4045ae09492f0.js" defer></script>
   <script>
     (function () {
       var base = "/txt";
       var p = window.location.pathname;
-      if (p === "/" || p === base || p.indexOf(base + "/") === 0) {
-        if (p !== base && p.indexOf(base + "/") === 0) {
-          var clean = p.slice(base.length) || "/";
-          window.history.replaceState(null, "", clean);
-        }
-      } else if (p !== "/") {
-        window.location.replace(base + p);
+      if (p === base || p.indexOf(base + "/") === 0) {
+        var clean = p.slice(base.length) || "/";
+        window.history.replaceState(null, "", clean);
       }
     })();
   </script>
