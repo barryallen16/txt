@@ -10,8 +10,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
+import { scanFromPath } from "react-native-qr-from-image";
 import AppButton from "../../components/AppButton";
 import AppHeader from "../../components/AppHeader";
 import Loading from "../../components/Loading";
@@ -36,6 +38,7 @@ export default function QrShareScreen() {
   const [appActive, setAppActive] = useState(
     AppState.currentState !== "background",
   );
+  const [decoding, setDecoding] = useState(false);
   const scanLock = useRef(false);
 
   const showToast = useToast();
@@ -75,6 +78,35 @@ export default function QrShareScreen() {
     setMode("review");
     setSent(false);
     setError(null);
+  };
+
+  const pickFromGallery = async () => {
+    setDecoding(true);
+    setError(null);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 1,
+        allowsEditing: false,
+      });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      const codes = await scanFromPath(result.assets[0].uri);
+      const data = codes?.[0] ?? null;
+      if (!data) {
+        setError("No QR code found in that image.");
+        return;
+      }
+
+      setText(data ?? "");
+      setMode("review");
+      setSent(false);
+      setError(null);
+    } catch (failure) {
+      setError(failure?.message ?? "Could not read that picture.");
+    } finally {
+      setDecoding(false);
+    }
   };
 
   const send = async () => {
@@ -223,7 +255,18 @@ export default function QrShareScreen() {
           </View>
         ) : null}
 
-        {mode === "scan" ? scanner() : null}
+        {mode === "scan" ? (
+          <>
+            {scanner()}
+            <AppButton
+              label={decoding ? "Reading..." : "Choose from gallery"}
+              variant="outline"
+              onPress={pickFromGallery}
+              loading={decoding}
+              disabled={decoding}
+            />
+          </>
+        ) : null}
 
         {sent ? (
           <View style={styles.sentRow}>
