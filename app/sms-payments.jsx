@@ -199,21 +199,14 @@ export default function SmsPaymentsScreen() {
     setError(null);
     setPayingId(item.id);
     try {
-      if (item.upi_link) {
-        await Linking.openURL(item.upi_link);
-      } else {
-        await Linking.openURL(`upi://pay?pa=${encodeURIComponent(vpa)}`);
-      }
+      // Open UPI app home page without payment parameters, so the user can paste the copied UPI ID
+      await Linking.openURL("upi://pay");
     } catch {
-      try {
-        await Linking.openURL("upi://pay");
-      } catch {
-        setError(
-          ok
-            ? "UPI ID was copied, but no UPI app could open automatically. Open your UPI app and paste the ID."
-            : "No UPI app could open this request."
-        );
-      }
+      setError(
+        ok
+          ? "UPI ID was copied, but no UPI app could open automatically. Open your UPI app and paste the ID."
+          : "No UPI app could open."
+      );
     } finally {
       setPayingId(null);
     }

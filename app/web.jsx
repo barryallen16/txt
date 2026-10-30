@@ -166,11 +166,12 @@ export default function WebScreen() {
     });
 
     try {
-      await openUpiUri(parsed.link);
+      // Open UPI app home page without payment parameters, so the user can paste the copied UPI ID
+      await openUpiUri("upi://pay");
     } catch {
       showToast({
-        message: "Could not open UPI app. Use QR code or paste UPI ID.",
-        type: "danger",
+        message: "UPI ID copied. Open your UPI app and paste the ID.",
+        type: "info",
       });
     }
   };

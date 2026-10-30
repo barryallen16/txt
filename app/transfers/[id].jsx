@@ -174,17 +174,10 @@ export default function TransferDetailScreen() {
       });
     }
     try {
-      if (transfer?.payload) {
-        await Linking.openURL(transfer.payload.trim());
-      } else {
-        await Linking.openURL(`upi://pay?pa=${encodeURIComponent(upiParsed.pa)}`);
-      }
+      // Open UPI app home page without payment parameters, so user can paste the copied UPI ID
+      await Linking.openURL("upi://pay");
     } catch {
-      try {
-        await Linking.openURL("upi://pay");
-      } catch {
-        // Fallback when no UPI app is installed
-      }
+      // Fallback when no UPI app is installed
     }
   };
 
