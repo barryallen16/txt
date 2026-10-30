@@ -4,6 +4,7 @@ import {
   Alert,
   AppState,
   Image,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -146,9 +147,9 @@ export default function PermissionsScreen() {
           ? {
               key: "notificationListener",
               icon: "bell",
-              title: "Read incoming SMS",
+              title: "Background notification reader",
               detail:
-                "Lets txt open pictures, codes and payment requests while the app is closed.",
+                "Listens for incoming txt alerts while the app is closed so you get instant popups.",
               granted: snapshot.notificationListener === "authorized",
               actionLabel: "Open settings",
               settingsLink: false,
@@ -158,9 +159,9 @@ export default function PermissionsScreen() {
           ? {
               key: "sms",
               icon: "message-text",
-              title: "Send and read messages",
+              title: "SMS inbox & direct send",
               detail:
-                "Sends requests without opening the Messages app and lets multipart items arrive whole.",
+                "Reads SMS inbox so swiped or missed payment requests and pictures load reliably, and sends transfers.",
               granted: snapshot.sms,
               actionLabel: "Allow messages",
               settingsLink: true,
@@ -325,6 +326,21 @@ export default function PermissionsScreen() {
                   ) : null}
                 </View>
               ) : null}
+
+              {!row.granted && row.key === "notificationListener" ? (
+                <Pressable
+                  onPress={() => Linking.openURL("https://barryallen16.github.io/txt/#guide-restricted")}
+                  accessibilityRole="link"
+                  accessibilityLabel="View installation guide for restricted settings"
+                  hitSlop={8}
+                  style={styles.guideHelpRow}
+                >
+                  <PixelIcon name="info" size={13} color={colors.accent} />
+                  <Text style={[type.label, styles.guideHelpText]}>
+                    BLOCKED BY RESTRICTED SETTINGS? SEE GUIDE
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           ))}
 
@@ -457,5 +473,15 @@ const styles = StyleSheet.create({
   skip: {
     alignItems: "center",
     paddingVertical: space.sm,
+  },
+  guideHelpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    paddingTop: space.xs,
+  },
+  guideHelpText: {
+    color: colors.accent,
+    fontSize: 11,
   },
 });

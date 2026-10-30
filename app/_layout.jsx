@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 import { Stack, router, useRootNavigationState } from "expo-router";
 import { useFonts } from "expo-font";
-import * as Notifications from "expo-notifications";
+import Notifications from "../lib/notifications";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { colors, fontFiles } from "../lib/theme";
 import { getMeta } from "../lib/db";
 import { syncInbox } from "../lib/syncInbox";
+import { subscribeToSmsArrival } from "../lib/sms";
 import { ToastProvider } from "../components/Toast";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -83,7 +84,7 @@ export default function RootLayout() {
     const style = document.createElement("style");
     style.textContent = `
       html, body, #root {
-        background-color: ${colors.bg} !important;
+        background-color: #02070A !important;
         color-scheme: dark;
       }
       body {
@@ -91,7 +92,7 @@ export default function RootLayout() {
         overscroll-behavior-y: none;
       }
       *:focus-visible {
-        outline: 2px solid ${colors.accent} !important;
+        outline: 2px solid #0593C6 !important;
         outline-offset: 2px;
       }
     `;
@@ -160,9 +161,19 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [flushPendingRoute]);
 
+  // Real-time SMS observer: immediately triggers inbox sync the millisecond
+  // any SMS is written into Android's database (sub-100ms latency).
+  useEffect(() => {
+    if (Platform.OS === "web") return undefined;
+    const unsubscribe = subscribeToSmsArrival(() => {
+      syncInbox({ force: false }).catch(() => {});
+    });
+    return unsubscribe;
+  }, []);
+
   // Notification access can be off, or a messaging app may post no
-  // notification at all. Poll the SMS inbox while the app is open so those
-  // requests still show up without a restart.
+  // notification at all. Poll the SMS inbox every 3s while the app is active in
+  // foreground so those requests still show up without a restart.
   useEffect(() => {
     if (Platform.OS === "web") return undefined;
     if (!navigationState?.key) return undefined;
@@ -174,7 +185,7 @@ export default function RootLayout() {
     const start = () => {
       tick();
       if (timer) return;
-      timer = setInterval(tick, 10_000);
+      timer = setInterval(tick, 3_000);
     };
     const stop = () => {
       if (!timer) return;

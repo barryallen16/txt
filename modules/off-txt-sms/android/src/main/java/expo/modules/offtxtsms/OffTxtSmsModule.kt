@@ -12,6 +12,9 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.ContactsContract
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.Telephony
 import android.telephony.SmsManager
 import android.telephony.SubscriptionManager
@@ -39,13 +42,76 @@ class SendFailedException(reason: String) :
  * rather than published on Play.
  */
 class OffTxtSmsModule : Module() {
+  private var smsObserver: ContentObserver? = null
+
+  private fun registerSmsObserver() {
+    if (smsObserver != null) return
+    val ctx = appContext.reactContext ?: return
+    if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
+
+    try {
+      val handler = Handler(Looper.getMainLooper())
+      smsObserver = object : ContentObserver(handler) {
+        override fun onChange(selfChange: Boolean, uri: Uri?) {
+          super.onChange(selfChange, uri)
+          if (selfChange) return
+          if (uri != null) {
+            val s = uri.toString().lowercase()
+            if (s.contains("sent") || s.contains("outbox") || s.contains("draft")) {
+              return
+            }
+          }
+          try {
+            sendEvent("onSmsReceived", mapOf("uri" to (uri?.toString() ?: "")))
+          } catch (_: Throwable) {}
+        }
+      }
+      ctx.contentResolver.registerContentObserver(
+        Telephony.Sms.CONTENT_URI,
+        true,
+        smsObserver!!
+      )
+    } catch (_: Throwable) {}
+  }
+
+  private fun unregisterSmsObserver() {
+    val observer = smsObserver ?: return
+    try {
+      val ctx = appContext.reactContext
+      ctx?.contentResolver?.unregisterContentObserver(observer)
+    } catch (_: Throwable) {}
+    smsObserver = null
+  }
+
   private val context: Context
     get() = appContext.reactContext ?: throw CodedException("React context lost")
 
   override fun definition() = ModuleDefinition {
     Name("OffTxtSms")
 
-    Events("onSendProgress")
+    Events("onSendProgress", "onSmsReceived")
+
+    Function("startSmsObserver") {
+      registerSmsObserver()
+      true
+    }
+
+    Function("stopSmsObserver") {
+      unregisterSmsObserver()
+      true
+    }
+
+    OnActivityEntersForeground {
+      registerSmsObserver()
+    }
+
+    OnActivityEntersBackground {
+      unregisterSmsObserver()
+    }
+
+    OnDestroy {
+      unregisterSmsObserver()
+    }
 
     Function("hasSendPermission") {
       granted(Manifest.permission.SEND_SMS)
@@ -134,11 +200,14 @@ class OffTxtSmsModule : Module() {
         Telephony.Sms.DATE
       )
 
+      val selection = if (since > 0) "${Telephony.Sms.DATE} >= ?" else null
+      val selectionArgs = if (since > 0) arrayOf(since.toString()) else null
+
       val cursor = contentResolver().query(
         Telephony.Sms.Inbox.CONTENT_URI,
         projection,
-        "${Telephony.Sms.DATE} >= ?",
-        arrayOf(since.toString()),
+        selection,
+        selectionArgs,
         "${Telephony.Sms.DATE} DESC"
       )
 

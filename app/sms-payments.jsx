@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
-import * as Notifications from "expo-notifications";
+import Notifications from "../lib/notifications";
 import RNAndroidNotificationListener from "react-native-android-notification-listener";
 import AppButton from "../components/AppButton";
 import AppHeader from "../components/AppHeader";
@@ -32,6 +32,7 @@ import {
 import { syncInbox, INBOX_SYNCED_EVENT } from "../lib/syncInbox";
 import { dayLabel } from "../lib/time";
 import { copyText } from "../lib/clipboard";
+import { hasReadPermission, requestSmsPermissions } from "../lib/sms";
 import { isMerchantUpi, isPersonalUpi, normalizeAmount, parseUpiLink } from "../lib/upi";
 import { openUpiLaunchIntent } from "../lib/upiLauncher";
 import { useToast } from "../components/Toast";
@@ -65,6 +66,9 @@ export default function SmsPaymentsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notificationAccess, setNotificationAccess] = useState("checking");
+  const [smsReadGranted, setSmsReadGranted] = useState(
+    Platform.OS === "android" ? hasReadPermission() : true,
+  );
   const [pushGranted, setPushGranted] = useState(true);
   const [askingPush, setAskingPush] = useState(false);
   const [payingId, setPayingId] = useState(null);
@@ -96,9 +100,24 @@ export default function SmsPaymentsScreen() {
     }
   }, []);
 
+  const checkSmsAccess = useCallback(() => {
+    if (Platform.OS === "android") {
+      setSmsReadGranted(hasReadPermission());
+    }
+  }, []);
+
   const load = useCallback(
     async (mode = "focus") => {
-      if (mode === "refresh") setRefreshing(true);
+      if (mode === "refresh") {
+        setRefreshing(true);
+        if (Platform.OS === "android" && !hasReadPermission()) {
+          const granted = await requestSmsPermissions({ read: true });
+          setSmsReadGranted(granted);
+          if (!granted) {
+            showToast("SMS permission needed to scan missed requests.", { tone: "alert" });
+          }
+        }
+      }
       readStored();
 
       try {
@@ -109,14 +128,15 @@ export default function SmsPaymentsScreen() {
         setRefreshing(false);
       }
     },
-    [readStored],
+    [readStored, showToast],
   );
 
   useFocusEffect(
     useCallback(() => {
       load("focus");
       checkNotificationAccess();
-    }, [load, checkNotificationAccess]),
+      checkSmsAccess();
+    }, [load, checkNotificationAccess, checkSmsAccess]),
   );
 
   // The background inbox poll can store a request while this screen is open.
@@ -132,10 +152,13 @@ export default function SmsPaymentsScreen() {
   // the user comes back to the app.
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (next) => {
-      if (next === "active") checkNotificationAccess();
+      if (next === "active") {
+        checkNotificationAccess();
+        checkSmsAccess();
+      }
     });
     return () => subscription.remove();
-  }, [checkNotificationAccess]);
+  }, [checkNotificationAccess, checkSmsAccess]);
 
   useEffect(
     () => () => {
@@ -363,6 +386,27 @@ export default function SmsPaymentsScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {Platform.OS === "android" && !smsReadGranted ? (
+        <View style={styles.accessCard}>
+          <View style={styles.accessText}>
+            <PixelIcon name="message-text" size={24} color={colors.coral || colors.accent} />
+            <Text style={type.bodyMedium}>SMS Inbox access is off</Text>
+            <Text style={type.muted}>
+              Allow SMS access so swiped, dismissed, or missed payment requests can be recovered from your inbox on reload.
+            </Text>
+          </View>
+          <AppButton
+            label="Allow SMS access"
+            variant="primary"
+            onPress={async () => {
+              const granted = await requestSmsPermissions({ read: true });
+              setSmsReadGranted(granted);
+              if (granted) load("refresh");
+            }}
+          />
+        </View>
+      ) : null}
 
       {Platform.OS === "android" && notificationAccess !== "authorized" ? (
         <View style={styles.accessCard}>

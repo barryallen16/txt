@@ -5,8 +5,10 @@ const path = require("path");
 const distDir = path.resolve("dist");
 
 const themeMeta = [
-  '  <meta name="theme-color" content="#0b0c10" />',
+  '  <meta name="theme-color" content="#02070A" />',
   '  <meta name="color-scheme" content="dark" />',
+  '  <link rel="icon" type="image/svg+xml" href="/txt/favicon.svg" />',
+  '  <link rel="alternate icon" href="/txt/favicon.ico" />',
 ].join("\n") + "\n";
 
 const manifestLink = '  <link rel="manifest" href="/txt/manifest.json" />\n';
@@ -41,11 +43,11 @@ let html = fs.readFileSync(path.join(distDir, "index.html"), "utf8");
 // bounce, dynamic browser address bar resize, and safe areas never flash white.
 html = html.replace(
   /html,\s*body\s*\{[^}]*\}/,
-  'html,\n      body {\n        height: 100%;\n        background-color: #0b0c10;\n        color-scheme: dark;\n      }\n      body {\n        overflow-x: hidden;\n        overscroll-behavior-y: none;\n      }'
+  'html,\n      body {\n        height: 100%;\n        background-color: #02070A;\n        color-scheme: dark;\n      }\n      body {\n        overflow-x: hidden;\n        overscroll-behavior-y: none;\n      }'
 );
 html = html.replace(
   /#root\s*\{[^}]*\}/,
-  '#root {\n        display: flex;\n        height: 100%;\n        flex: 1;\n        background-color: #0b0c10;\n      }'
+  '#root {\n        display: flex;\n        height: 100%;\n        flex: 1;\n        background-color: #02070A;\n      }'
 );
 
 // Inject manifest + iOS meta tags before </head>.
@@ -94,11 +96,21 @@ for (const icon of ["icon-192.png", "icon-512.png", "icon-maskable-512.png"]) {
   }
 }
 
-// Ensure manifest.json and favicon are in dist
-for (const file of ["manifest.json", "favicon.ico"]) {
+// Ensure manifest.json, favicon, and demo video are in dist
+for (const file of ["manifest.json", "favicon.ico", "favicon.svg", "demo.mp4"]) {
   const src = path.join("public", file);
   if (fs.existsSync(src)) {
     fs.copyFileSync(src, path.join(distDir, file));
+  }
+}
+
+// Ensure guide images from public/images/guide are present in dist/images/guide
+const guideImgDir = path.join(distDir, "images", "guide");
+fs.mkdirSync(guideImgDir, { recursive: true });
+const publicGuideDir = path.join("public", "images", "guide");
+if (fs.existsSync(publicGuideDir)) {
+  for (const img of fs.readdirSync(publicGuideDir)) {
+    fs.copyFileSync(path.join(publicGuideDir, img), path.join(guideImgDir, img));
   }
 }
 

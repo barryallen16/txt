@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import AppButton from "../components/AppButton";
@@ -103,6 +103,23 @@ export default function HowItWorksScreen() {
         ))}
 
         <Pressable
+          onPress={() => Linking.openURL("https://github.com/barryallen16/txt")}
+          accessibilityRole="link"
+          accessibilityLabel="Star txt on GitHub"
+          hitSlop={8}
+          style={({ pressed }) => [styles.githubCard, pressed && styles.githubCardPressed]}
+        >
+          <View style={styles.githubCardLeft}>
+            <PixelIcon name="star" size={20} color="#D83995" />
+            <View style={styles.githubCardText}>
+              <Text style={type.bodyMedium}>Star txt on GitHub</Text>
+              <Text style={type.muted}>100% free and open source</Text>
+            </View>
+          </View>
+          <PixelIcon name="arrow-right" size={16} color={colors.accent} />
+        </Pressable>
+
+        <Pressable
           onPress={() => router.push("/legal")}
           accessibilityRole="link"
           accessibilityLabel="Read the terms"
@@ -179,6 +196,28 @@ const styles = StyleSheet.create({
   },
   bodyLine: {
     flexShrink: 1,
+  },
+  githubCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius,
+    backgroundColor: colors.panel,
+  },
+  githubCardPressed: {
+    backgroundColor: colors.line,
+    opacity: 0.9,
+  },
+  githubCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+  },
+  githubCardText: {
+    gap: 2,
   },
   termsLink: {
     alignSelf: "center",

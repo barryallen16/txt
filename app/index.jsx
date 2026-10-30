@@ -145,11 +145,18 @@ export default function ScannerScreen() {
       <AppHeader
         showLogo
         right={
-          <IconButton
-            icon="info"
-            label="How txt works"
-            onPress={() => router.push("/how-it-works")}
-          />
+          <View style={styles.headerActions}>
+            <IconButton
+              icon="star"
+              label="Star on GitHub"
+              onPress={() => Linking.openURL("https://github.com/barryallen16/txt")}
+            />
+            <IconButton
+              icon="info"
+              label="How txt works"
+              onPress={() => router.push("/how-it-works")}
+            />
+          </View>
         }
       />
 
