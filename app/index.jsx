@@ -13,6 +13,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useFocusEffect } from "expo-router";
 import AppButton from "../components/AppButton";
 import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
 import IconButton from "../components/IconButton";
 import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
@@ -140,22 +141,15 @@ export default function ScannerScreen() {
     : "Camera paused";
 
   return (
-    <SafeAreaView style={styles.screen} edges={["bottom"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
       <AppHeader
         showLogo
         right={
-          <View style={styles.headerActions}>
-            <IconButton
-              icon="info"
-              label="How txt works"
-              onPress={() => router.push("/how-it-works")}
-            />
-            <IconButton
-              icon="inbox"
-              label="Open shared items"
-              onPress={() => router.push("/transfers")}
-            />
-          </View>
+          <IconButton
+            icon="info"
+            label="How txt works"
+            onPress={() => router.push("/how-it-works")}
+          />
         }
       />
 
@@ -269,6 +263,7 @@ export default function ScannerScreen() {
           to create a request.
         </Text>
       </View>
+      <BottomNav current="scan" />
     </SafeAreaView>
   );
 }

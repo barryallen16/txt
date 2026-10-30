@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import AppButton from "../components/AppButton";
 import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
 import IconButton from "../components/IconButton";
 import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
@@ -153,31 +154,18 @@ export default function TransfersScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={["bottom"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
       <AppHeader
         title="Shared items"
-        onBack={goBack}
         right={
           refreshing ? (
             <ActivityIndicator color={colors.muted} style={styles.headerSpinner} />
           ) : (
-            <View style={styles.headerActions}>
-              <IconButton
-                icon="send"
-                label="Send something"
-                onPress={() => router.push("/share")}
-              />
-              <IconButton
-                icon="message-text"
-                label="Payment requests"
-                onPress={() => router.push("/sms-payments")}
-              />
-              <IconButton
-                icon="reload"
-                label="Refresh shared items"
-                onPress={() => load("refresh")}
-              />
-            </View>
+            <IconButton
+              icon="reload"
+              label="Refresh shared items"
+              onPress={() => load("refresh")}
+            />
           )
         }
       />
@@ -265,6 +253,7 @@ export default function TransfersScreen() {
           )}
         />
       )}
+      <BottomNav current="inbox" />
     </SafeAreaView>
   );
 }

@@ -18,6 +18,7 @@ import * as Notifications from "expo-notifications";
 import RNAndroidNotificationListener from "react-native-android-notification-listener";
 import AppButton from "../components/AppButton";
 import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
 import IconButton from "../components/IconButton";
 import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
@@ -324,10 +325,9 @@ export default function SmsPaymentsScreen() {
   const showLoading = loading && rows.length === 0;
 
   return (
-    <SafeAreaView style={styles.screen} edges={["bottom"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
       <AppHeader
         title="Requests"
-        onBack={() => (router.canGoBack() ? router.back() : router.replace("/"))}
         right={
           refreshing ? (
             <ActivityIndicator color={colors.muted} style={styles.headerSpinner} />
@@ -623,6 +623,7 @@ export default function SmsPaymentsScreen() {
           }
         />
       )}
+      <BottomNav current="requests" />
     </SafeAreaView>
   );
 }
