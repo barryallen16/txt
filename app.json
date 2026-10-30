@@ -4,7 +4,8 @@
     "slug": "txt",
     "scheme": "txt",
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/txt"
     },
     "version": "1.0.1",
     "orientation": "portrait",
@@ -80,7 +81,9 @@
         {
           "photosPermission": "Allow $(PRODUCT_NAME) to read your photos.",
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save received pictures.",
-          "granularPermissions": ["photo"]
+          "granularPermissions": [
+            "photo"
+          ]
         }
       ],
       "expo-router",
@@ -89,7 +92,10 @@
         "expo-build-properties",
         {
           "android": {
-            "buildArchs": ["arm64-v8a", "armeabi-v7a"],
+            "buildArchs": [
+              "arm64-v8a",
+              "armeabi-v7a"
+            ],
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
           }

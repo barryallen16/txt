@@ -2,12 +2,13 @@
   "name": "txt",
   "short_name": "txt",
   "description": "Send UPI payment requests over plain SMS — no data plan needed.",
-  "start_url": "./web",
+  "start_url": "./",
+  "scope": "./",
+  "id": "/txt/",
   "display": "standalone",
   "background_color": "#0b0c10",
   "theme_color": "#7c5cff",
   "orientation": "portrait",
-  "scope": "./",
   "icons": [
     {
       "src": "./icons/icon-192.png",
@@ -20,6 +21,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "categories": ["finance", "utilities"],

@@ -70,7 +70,10 @@ export function useToast() {
   if (!ctx) {
     throw new Error("useToast must be used inside a ToastProvider");
   }
-  return ctx;
+  const showToast = ctx.show;
+  showToast.show = ctx.show;
+  showToast.dismiss = ctx.dismiss;
+  return showToast;
 }
 
 const styles = StyleSheet.create({

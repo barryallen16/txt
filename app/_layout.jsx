@@ -12,14 +12,16 @@ import { ToastProvider } from "../components/Toast";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+if (Platform.OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fontFiles);
@@ -107,6 +109,7 @@ export default function RootLayout() {
   // On the very first launch, walk the user through how txt works and the
   // terms, then ask for the permissions the app cannot work without.
   useEffect(() => {
+    if (Platform.OS === "web") return;
     if (!navigationState?.key) return;
     if (!fontsLoaded && !fontError) return;
     if (checkedOnboarding.current) return;
@@ -125,6 +128,7 @@ export default function RootLayout() {
   // The route is queued until navigation and the app are both ready, because a
   // response can arrive before the navigator mounts on a cold start.
   useEffect(() => {
+    if (Platform.OS === "web") return undefined;
     const routeFor = (response) => {
       const data = response?.notification?.request?.content?.data;
       if (data?.transferId != null) return `/transfers/${data.transferId}`;
@@ -160,6 +164,7 @@ export default function RootLayout() {
   // notification at all. Poll the SMS inbox while the app is open so those
   // requests still show up without a restart.
   useEffect(() => {
+    if (Platform.OS === "web") return undefined;
     if (!navigationState?.key) return undefined;
 
     let timer = null;

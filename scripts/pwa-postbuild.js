@@ -4,64 +4,38 @@ const path = require("path");
 
 const distDir = path.resolve("dist");
 
-// Make root-relative URLs relative so they work from /txt/ subdirectory on GitHub Pages.
-// e.g. "/_expo/static/js/..." → "./_expo/static/js/...", "/manifest.json" → "./manifest.json"
-function relativizeUrls(html) {
-  return html.replace(/(src|href)="\/(?!\/)([^"]*)"/g, (m, attr, url) => {
-    return `${attr}="./${url}"`;
-  });
-}
-
-// Inline script that strips the /txt GitHub Pages subdirectory prefix so Expo Router
-// matches routes correctly. Runs before the Expo Router bundle loads, so it works on
-// initial load AND survives refreshes.
-// Only strips /txt when the path is actually under /txt/ (GitHub Pages subdirectory).
-// When served at root (zrok, localhost), the path is used as-is.
-const basenameScript = [
-  '  <script>',
-  '    (function () {',
-  '      var base = "/txt";',
-  '      var p = window.location.pathname;',
-  '      if (p === base || p.indexOf(base + "/") === 0) {',
-  '        var clean = p.slice(base.length) || "/";',
-  '        window.history.replaceState(null, "", clean);',
-  '      }',
-  '    })();',
-  "  </script>",
-].join("\n") + "\n";
-
 const themeMeta = [
   '  <meta name="theme-color" content="#0b0c10" />',
   '  <meta name="color-scheme" content="dark" />',
 ].join("\n") + "\n";
 
-const manifestLink =
-  '  <link rel="manifest" href="./manifest.json" />\n';
+const manifestLink = '  <link rel="manifest" href="/txt/manifest.json" />\n';
 const iosMeta = [
   '  <meta name="apple-mobile-web-app-capable" content="yes" />',
   '  <meta name="mobile-web-app-capable" content="yes" />',
   '  <meta name="apple-mobile-web-app-status-bar-style" content="black" />',
   '  <meta name="apple-mobile-web-app-title" content="txt" />',
-  '  <link rel="apple-touch-icon" href="./icons/icon-192.png" />',
-  '  <link rel="apple-touch-icon-precomposed" href="./icons/icon-192.png" />',
+  '  <link rel="apple-touch-icon" href="/txt/icons/icon-192.png" />',
+  '  <link rel="apple-touch-icon-precomposed" href="/txt/icons/icon-192.png" />',
 ].join("\n") + "\n";
 
 const swRegister = [
   '  <script>',
   '    if ("serviceWorker" in navigator) {',
   '      window.addEventListener("load", () => {',
-  '        navigator.serviceWorker.register("./sw.js").then(() => {',
-  '          console.log("txt SW registered");',
-  '        });',
+  '        navigator.serviceWorker.register("/txt/sw.js", { scope: "/txt/" })',
+  '          .then((reg) => {',
+  '            console.log("txt SW registered with scope:", reg.scope);',
+  '          })',
+  '          .catch((err) => {',
+  '            console.error("txt SW registration failed:", err);',
+  '          });',
   '      });',
   '    }',
-  "  </script>",
+  '  </script>',
 ].join("\n") + "\n";
 
 let html = fs.readFileSync(path.join(distDir, "index.html"), "utf8");
-
-// Relativize asset paths.
-html = relativizeUrls(html);
 
 // Ensure the root document canvas matches the app's dark theme so that overscroll
 // bounce, dynamic browser address bar resize, and safe areas never flash white.
@@ -80,16 +54,14 @@ if (!html.includes('rel="manifest"')) {
   html = html.replace("shrink-to-fit=no", "shrink-to-fit=no, viewport-fit=cover");
 }
 
-// Inject basename script + service worker registration before </body>.
-if (!html.includes('window.location.replace')) {
-  html = html.replace("</body>", basenameScript + swRegister + "</body>");
+// Inject service worker registration before </body>.
+if (!html.includes('serviceWorker.register')) {
+  html = html.replace("</body>", swRegister + "</body>");
 }
 
 fs.writeFileSync(path.join(distDir, "index.html"), html);
 
-// Stamp the service worker cache with a hash of the built shell. index.html
-// references content-hashed bundles, so any code change changes its bytes
-// and gets a new cache name - installed PWAs then pick up the update.
+// Stamp the service worker cache with a hash of the built shell.
 const swPath = path.join(distDir, "sw.js");
 if (fs.existsSync(swPath)) {
   const digest = crypto
@@ -100,15 +72,37 @@ if (fs.existsSync(swPath)) {
   fs.writeFileSync(swPath, fs.readFileSync(swPath, "utf8").replace("%CACHE_NAME%", digest));
 }
 
-// 404.html fallback: GitHub Pages serves it for unknown routes (e.g. /txt/web).
-// It is a full copy of index.html, so the basename script runs and Expo Router
-// renders the correct route from the URL.
+// 404.html fallback: GitHub Pages serves it for unknown routes (e.g. /txt/pay/xyz).
 fs.copyFileSync(
   path.join(distDir, "index.html"),
-  path.join(distDir, "404.html"),
+  path.join(distDir, "404.html")
 );
 
-// .nojekyll disables Jekyll processing on GitHub Pages.
+// Create dist/web/index.html so /txt/web directly serves 200 OK on GitHub Pages without 404!
+fs.mkdirSync(path.join(distDir, "web"), { recursive: true });
+fs.copyFileSync(
+  path.join(distDir, "index.html"),
+  path.join(distDir, "web", "index.html")
+);
+
+// Ensure icons from public/icons are present in dist/icons
+fs.mkdirSync(path.join(distDir, "icons"), { recursive: true });
+for (const icon of ["icon-192.png", "icon-512.png", "icon-maskable-512.png"]) {
+  const src = path.join("public", "icons", icon);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(distDir, "icons", icon));
+  }
+}
+
+// Ensure manifest.json and favicon are in dist
+for (const file of ["manifest.json", "favicon.ico"]) {
+  const src = path.join("public", file);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(distDir, file));
+  }
+}
+
+// .nojekyll disables Jekyll processing on GitHub Pages (required for _expo folder).
 fs.writeFileSync(path.join(distDir, ".nojekyll"), "");
 
-console.log("PWA postbuild done: relativized assets + PWA tags + basename script + 404.html + .nojekyll");
+console.log("PWA postbuild done: base /txt PWA shell + sw.js + 404.html + /web/index.html + .nojekyll");

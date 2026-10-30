@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -126,6 +127,22 @@ export default function WebScreen() {
     [],
   );
 
+  const isDesktopWeb =
+    Platform.OS === "web" &&
+    typeof navigator !== "undefined" &&
+    !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const openUpiUri = async (url) => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      // react-native-web's Linking.openURL uses window.open(url, '_blank').
+      // Mobile Chrome / Brave block window.open for custom schemes or open an empty blank tab.
+      // Setting window.location.href triggers the Android intent / UPI app chooser properly.
+      window.location.href = url;
+      return;
+    }
+    await Linking.openURL(url);
+  };
+
   const copyAndOpenUpi = async () => {
     if (!parsed?.upi?.pa) return;
     const ok = await copyText(parsed.upi.pa);
@@ -133,28 +150,46 @@ export default function WebScreen() {
       setCopiedId(true);
       if (idTimer.current) clearTimeout(idTimer.current);
       idTimer.current = setTimeout(() => setCopiedId(false), 1600);
-      showToast({ message: `UPI ID ${parsed.upi.pa} copied`, type: "info" });
     }
+
+    if (isDesktopWeb) {
+      showToast({
+        message: `UPI ID ${parsed.upi.pa} copied! Desktop browsers cannot open UPI apps — scan QR code above.`,
+        type: ok ? "info" : "danger",
+      });
+      return;
+    }
+
+    showToast({
+      message: `UPI ID ${parsed.upi.pa} copied. Opening UPI app...`,
+      type: ok ? "info" : "danger",
+    });
+
     try {
-      await Linking.openURL(parsed.link);
+      await openUpiUri(parsed.link);
     } catch {
       showToast({
-        message: "UPI ID copied. Desktop browsers cannot open UPI links.",
-        type: ok ? "info" : "danger",
+        message: "Could not open UPI app. Use QR code or paste UPI ID.",
+        type: "danger",
       });
     }
   };
 
   const payWithUpi = async () => {
     if (!parsed) return;
+    if (isDesktopWeb) {
+      showToast({
+        message: "Desktop browsers cannot open UPI links. Scan QR code above.",
+        type: "danger",
+      });
+      return;
+    }
     try {
-      await Linking.openURL(parsed.link);
+      await openUpiUri(parsed.link);
       showToast({ message: "Opening your UPI app..." });
     } catch {
-      // On desktop browsers the upi:// scheme won't open anything; the amount
-      // and the link are still copyable below.
       showToast({
-        message: "Desktop browsers cannot open UPI links. Use copy below.",
+        message: "Could not open UPI app. Use QR code or copy UPI ID.",
         type: "danger",
       });
     }
