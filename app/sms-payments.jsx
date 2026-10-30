@@ -177,7 +177,7 @@ export default function SmsPaymentsScreen() {
     return [...groups.values()];
   }, [tab, openRequests, history]);
 
-  // Copy the UPI ID and open the UPI app so the user can easily paste and pay.
+  // Copy the UPI ID so the user can easily paste and pay in any UPI app.
   const copyAndOpen = async (item) => {
     const vpa = item.payee_vpa || parseUpiLink(item.upi_link || "").pa;
     if (!vpa) {
@@ -189,26 +189,16 @@ export default function SmsPaymentsScreen() {
     if (ok) {
       setCopiedKey(`pay:${item.id}`);
       if (copiedTimer.current) clearTimeout(copiedTimer.current);
-      copiedTimer.current = setTimeout(() => setCopiedKey(null), 1800);
+      copiedTimer.current = setTimeout(() => setCopiedKey(null), 2500);
       showToast({
-        message: `UPI ID ${vpa} copied. Opening UPI app...`,
+        message: `UPI ID ${vpa} copied! Paste in Google Pay, PhonePe or Paytm.`,
         type: "info",
       });
-    }
-
-    setError(null);
-    setPayingId(item.id);
-    try {
-      // Open UPI app home page without payment parameters, so the user can paste the copied UPI ID
-      await Linking.openURL("upi://pay");
-    } catch {
-      setError(
-        ok
-          ? "UPI ID was copied, but no UPI app could open automatically. Open your UPI app and paste the ID."
-          : "No UPI app could open."
-      );
-    } finally {
-      setPayingId(null);
+    } else {
+      showToast({
+        message: "Could not copy UPI ID.",
+        type: "danger",
+      });
     }
   };
 
@@ -523,14 +513,11 @@ export default function SmsPaymentsScreen() {
                       <AppButton
                         label={
                           isPayCopied
-                            ? "Copied! Opening UPI..."
-                            : paying
-                              ? "Opening UPI..."
-                              : "Copy UPI ID & open app"
+                            ? "Copied! Paste in UPI app"
+                            : "Copy UPI ID to pay"
                         }
-                        icon="arrow-right"
+                        icon={isPayCopied ? "check" : "copy"}
                         variant="primary"
-                        loading={paying}
                         disabled={working || !item.payee_vpa}
                         onPress={() => copyAndOpen(item)}
                         style={styles.actionButton}

@@ -167,17 +167,16 @@ export default function TransferDetailScreen() {
     if (ok) {
       setCopiedField("vpa");
       if (copiedTimer.current) clearTimeout(copiedTimer.current);
-      copiedTimer.current = setTimeout(() => setCopiedField(null), 1800);
+      copiedTimer.current = setTimeout(() => setCopiedField(null), 2500);
       showToast({
-        message: `UPI ID ${upiParsed.pa} copied. Opening UPI app...`,
+        message: `UPI ID ${upiParsed.pa} copied! Paste it in your UPI app.`,
         type: "info",
       });
-    }
-    try {
-      // Open UPI app home page without payment parameters, so user can paste the copied UPI ID
-      await Linking.openURL("upi://pay");
-    } catch {
-      // Fallback when no UPI app is installed
+    } else {
+      showToast({
+        message: "Could not copy UPI ID.",
+        type: "danger",
+      });
     }
   };
 
@@ -294,10 +293,10 @@ export default function TransferDetailScreen() {
                   <AppButton
                     label={
                       copiedField === "vpa"
-                        ? "Copied! Opening UPI..."
-                        : "Copy UPI ID & open app"
+                        ? "Copied! Paste in UPI app"
+                        : "Copy UPI ID to pay"
                     }
-                    icon="copy"
+                    icon={copiedField === "vpa" ? "check" : "copy"}
                     variant="primary"
                     onPress={copyAndOpenUpi}
                     style={styles.actionButton}

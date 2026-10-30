@@ -143,35 +143,21 @@ export default function WebScreen() {
     await Linking.openURL(url);
   };
 
-  const copyAndOpenUpi = async () => {
+  const copyUpiId = async () => {
     if (!parsed?.upi?.pa) return;
     const ok = await copyText(parsed.upi.pa);
     if (ok) {
       setCopiedId(true);
       if (idTimer.current) clearTimeout(idTimer.current);
-      idTimer.current = setTimeout(() => setCopiedId(false), 1600);
-    }
-
-    if (isDesktopWeb) {
+      idTimer.current = setTimeout(() => setCopiedId(false), 2500);
       showToast({
-        message: `UPI ID ${parsed.upi.pa} copied! Desktop browsers cannot open UPI apps — scan QR code above.`,
-        type: ok ? "info" : "danger",
-      });
-      return;
-    }
-
-    showToast({
-      message: `UPI ID ${parsed.upi.pa} copied. Opening UPI app...`,
-      type: ok ? "info" : "danger",
-    });
-
-    try {
-      // Open UPI app home page without payment parameters, so the user can paste the copied UPI ID
-      await openUpiUri("upi://pay");
-    } catch {
-      showToast({
-        message: "UPI ID copied. Open your UPI app and paste the ID.",
+        message: `UPI ID ${parsed.upi.pa} copied! Paste it in your UPI app.`,
         type: "info",
+      });
+    } else {
+      showToast({
+        message: "Could not copy UPI ID. Please copy it manually.",
+        type: "danger",
       });
     }
   };
@@ -308,13 +294,33 @@ export default function WebScreen() {
               <Text style={type.muted}>{parsed.upi.pa}</Text>
               <View style={styles.buttonRow}>
                 <Pressable
-                  onPress={copyAndOpenUpi}
+                  onPress={copyUpiId}
                   style={[styles.button, copiedId && styles.buttonCopied, styles.buttonRowItem]}
                 >
                   <Text style={[type.button, { color: colors.accentInk }]}>
-                    {copiedId ? "copied" : "copy UPI ID & open app"}
+                    {copiedId ? "✓ UPI ID copied" : "copy UPI ID to pay"}
                   </Text>
                 </Pressable>
+              </View>
+
+              <View style={styles.stepsCard}>
+                <Text style={styles.stepsHead}>HOW TO PAY</Text>
+                <View style={styles.stepItem}>
+                  <Text style={styles.stepNum}>1</Text>
+                  <Text style={styles.stepText}>
+                    {copiedId ? "UPI ID is copied to clipboard" : "Tap 'copy UPI ID to pay' above"}
+                  </Text>
+                </View>
+                <View style={styles.stepItem}>
+                  <Text style={styles.stepNum}>2</Text>
+                  <Text style={styles.stepText}>Open Google Pay, PhonePe, or Paytm</Text>
+                </View>
+                <View style={styles.stepItem}>
+                  <Text style={styles.stepNum}>3</Text>
+                  <Text style={styles.stepText}>
+                    Tap "To UPI ID" (or search) & paste
+                  </Text>
+                </View>
               </View>
               {(parsed.amount || isMerchantUpi(parsed.upi)) ? (
                 <View style={styles.buttonRow}>
@@ -549,6 +555,43 @@ const styles = StyleSheet.create({
   },
   noteText: {
     marginTop: space.sm,
+  },
+  stepsCard: {
+    marginTop: space.sm,
+    padding: space.md,
+    borderRadius: radius,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.bg,
+    gap: space.sm,
+  },
+  stepsHead: {
+    fontFamily: fonts.pixel,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: colors.accent,
+  },
+  stepItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  stepNum: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.line,
+    color: colors.text,
+    fontSize: 12,
+    fontFamily: fonts.medium,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  stepText: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.text,
   },
   footerNote: {
     marginTop: space.xl,
