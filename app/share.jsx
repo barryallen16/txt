@@ -1,9 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import AppHeader from "../components/AppHeader";
 import PixelIcon from "../components/PixelIcon";
-import { colors, radius, space, type } from "../lib/theme";
+import { colors, radius, radiusLg, space, type } from "../lib/theme";
 
 const OPTIONS = [
   {
@@ -106,11 +106,13 @@ const styles = StyleSheet.create({
     padding: space.lg,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
   },
   rowPressed: {
     backgroundColor: colors.line,
+    transform: [{ scale: 0.985 }],
   },
   rowText: {
     flex: 1,

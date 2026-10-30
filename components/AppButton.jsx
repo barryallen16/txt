@@ -1,4 +1,11 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import PixelIcon from "./PixelIcon";
 import { colors, controlHeight, radius, space, type } from "../lib/theme";
 
@@ -46,6 +53,7 @@ export default function AppButton({
         styles.base,
         look.container,
         pressed && look.pressed,
+        pressed && styles.pressed,
         blocked && styles.disabled,
         style,
       ]}
@@ -70,6 +78,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderRadius: radius,
     justifyContent: "center",
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
+  },
+  pressed: {
+    transform: [{ scale: 0.97 }],
+    opacity: 0.92,
   },
   content: {
     flexDirection: "row",
@@ -79,5 +92,6 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.4,
+    ...(Platform.OS === "web" ? { cursor: "not-allowed" } : {}),
   },
 });

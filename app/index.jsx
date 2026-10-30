@@ -16,7 +16,7 @@ import AppHeader from "../components/AppHeader";
 import IconButton from "../components/IconButton";
 import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
-import { colors, radius, space, type } from "../lib/theme";
+import { colors, radius, radiusLg, space, type } from "../lib/theme";
 import { getPermissionSnapshot, needsSetup } from "../lib/permissions";
 import { encodeLinkParam, normalizeAmount, parseUpiLink } from "../lib/upi";
 import WebScreen from "./web";
@@ -292,11 +292,12 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
   },
   setupBannerPressed: {
     backgroundColor: colors.line,
+    transform: [{ scale: 0.985 }],
   },
   setupText: {
     flex: 1,
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     overflow: "hidden",
     backgroundColor: colors.panel,
   },
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
     padding: space.xl,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
   },
   center: {

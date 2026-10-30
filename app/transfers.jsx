@@ -4,6 +4,7 @@ import {
   DeviceEventEmitter,
   FlatList,
   Image,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -26,7 +27,7 @@ import { buildTrail, formatAge } from "../lib/geo";
 import { decodeLocation } from "../lib/geo";
 import { summariseQr } from "../lib/qr";
 import { syncInbox, INBOX_SYNCED_EVENT } from "../lib/syncInbox";
-import { colors, radius, space, type } from "../lib/theme";
+import { colors, radius, radiusLg, radiusSm, space, type } from "../lib/theme";
 import { dayLabel, formatClock } from "../lib/time";
 import { KIND } from "../lib/transfer";
 
@@ -358,8 +359,8 @@ function Row({ item, items, isSent = false }) {
         </View>
         <View style={styles.trailing}>
           <Text style={type.label}>{LABEL[item.kind]}</Text>
-          <Text style={type.muted}>{formatClock(item.received_at)}</Text>
-          <Text style={type.muted}>{formatAge(trail.ageMs)}</Text>
+          <Text style={[type.muted, type.tabular]}>{formatClock(item.received_at)}</Text>
+          <Text style={[type.muted, type.tabular]}>{formatAge(trail.ageMs)}</Text>
         </View>
       </Pressable>
     );
@@ -390,7 +391,7 @@ function Row({ item, items, isSent = false }) {
       </View>
       <View style={styles.trailing}>
         <Text style={type.label}>{LABEL[item.kind] ?? "ITEM"}</Text>
-        <Text style={type.muted}>{formatClock(item.received_at)}</Text>
+        <Text style={[type.muted, type.tabular]}>{formatClock(item.received_at)}</Text>
       </View>
     </Pressable>
   );
@@ -450,18 +451,20 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
   },
   rowPressed: {
     backgroundColor: colors.line,
+    transform: [{ scale: 0.985 }],
   },
   pendingRow: {
     gap: space.sm,
     padding: space.md,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
   },
   pendingTop: {
@@ -494,8 +497,10 @@ const styles = StyleSheet.create({
   thumb: {
     width: 40,
     height: 40,
-    borderRadius: 4,
+    borderRadius: radiusSm,
     backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
   },
   empty: {
     flex: 1,

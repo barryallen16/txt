@@ -21,7 +21,7 @@ import AppHeader from "../components/AppHeader";
 import IconButton from "../components/IconButton";
 import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
-import { colors, fonts, radius, space, type } from "../lib/theme";
+import { colors, fonts, radius, radiusLg, radiusSm, space, type } from "../lib/theme";
 import {
   listHistoryRequests,
   listRequests,
@@ -479,8 +479,12 @@ export default function SmsPaymentsScreen() {
                       onPress={() => copyVpa(item)}
                       accessibilityRole="button"
                       accessibilityLabel="Copy UPI ID"
-                      hitSlop={6}
-                      style={[styles.vpaCopyChip, isVpaCopied && styles.vpaCopyChipActive]}
+                      hitSlop={8}
+                      style={({ pressed }) => [
+                        styles.vpaCopyChip,
+                        isVpaCopied && styles.vpaCopyChipActive,
+                        pressed && styles.vpaCopyChipPressed,
+                      ]}
                     >
                       <PixelIcon
                         name="copy"
@@ -498,7 +502,7 @@ export default function SmsPaymentsScreen() {
                   <Text style={type.muted} numberOfLines={1}>
                     {item.sender ? `From ${item.sender}` : "Unknown sender"}
                   </Text>
-                  <Text style={type.muted}>
+                  <Text style={[type.muted, type.tabular]}>
                     {timeOf(item.date)}
                     {handled ? ` · ${dayLabel(item.date)}` : ""}
                   </Text>
@@ -607,6 +611,14 @@ export default function SmsPaymentsScreen() {
                   ? "A request arrives when an SMS contains a :txt UPI link. The app checks messages on this phone every few seconds."
                   : "Mark a request done or dismiss it, and it lands here."}
               </Text>
+              {tab === "open" ? (
+                <AppButton
+                  label="Create request"
+                  icon="rupee"
+                  variant="outline"
+                  onPress={() => router.push("/pay/manual")}
+                />
+              ) : null}
             </View>
           }
         />
@@ -710,7 +722,7 @@ const styles = StyleSheet.create({
     padding: space.lg,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
     marginBottom: space.md,
   },
@@ -771,8 +783,13 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusSm,
     backgroundColor: colors.panel,
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
+  },
+  vpaCopyChipPressed: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.85,
   },
   vpaCopyChipActive: {
     backgroundColor: colors.accent,

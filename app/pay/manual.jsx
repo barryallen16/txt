@@ -236,7 +236,7 @@ export default function ManualPayRequestScreen() {
                   <Text style={type.bodyMedium} numberOfLines={1}>
                     {item.name}
                   </Text>
-                  <Text style={type.muted} numberOfLines={1}>
+                  <Text style={[type.muted, type.tabular]} numberOfLines={1}>
                     {item.number}
                   </Text>
                 </Pressable>

@@ -160,7 +160,7 @@ export default function RecipientPicker({
           <Text style={type.bodyMedium} numberOfLines={1}>
             {contact.name}
           </Text>
-          <Text style={type.muted}>{contact.number}</Text>
+          <Text style={[type.muted, type.tabular]}>{contact.number}</Text>
         </Pressable>
         <Pressable
           onPress={() => toggle(contact)}
@@ -357,6 +357,7 @@ const styles = StyleSheet.create({
   },
   starPressed: {
     backgroundColor: colors.line,
+    transform: [{ scale: 0.9 }],
   },
   permissionRow: {
     flexDirection: "row",

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PixelIcon from "./PixelIcon";
 import { colors, radius, space, type } from "../lib/theme";
 
@@ -14,6 +15,7 @@ let nextId = 0;
  */
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const insets = useSafeAreaInsets();
 
   const show = useCallback(
     ({ message, type = "info", duration = 3000 }) => {
@@ -37,22 +39,30 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ show, dismiss }}>
       {children}
-      <View style={styles.container}>
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.container,
+          { bottom: Math.max(space.lg, insets.bottom + space.sm) },
+        ]}
+      >
         {toasts.map((toast) => (
           <Pressable
             key={toast.id}
             onPress={() => dismiss(toast.id)}
             accessibilityRole="button"
             accessibilityLabel={`Dismiss: ${toast.message}`}
-            style={[
+            hitSlop={8}
+            style={({ pressed }) => [
               styles.row,
               toast.type === "danger" && styles.danger,
+              pressed && styles.rowPressed,
             ]}
           >
             <PixelIcon
               name={toast.type === "danger" ? "shield" : "info"}
               size={16}
-              color={colors.accentInk}
+              color={toast.type === "danger" ? colors.danger : colors.accent}
             />
             <Text style={[type.body, styles.text]} numberOfLines={2}>
               {toast.message}
@@ -79,12 +89,12 @@ export function useToast() {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: space.lg,
     left: 0,
     right: 0,
     alignItems: "center",
     paddingHorizontal: space.lg,
     gap: space.sm,
+    zIndex: 9999,
   },
   row: {
     flexDirection: "row",
@@ -97,6 +107,11 @@ const styles = StyleSheet.create({
     borderRadius: radius,
     backgroundColor: colors.panel,
     maxWidth: "88%",
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
+  },
+  rowPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
   danger: {
     borderColor: colors.danger,

@@ -27,7 +27,7 @@ import {
   parseUpiLink,
   validateAmount,
 } from "../lib/upi";
-import { colors, fonts, radius, space, type } from "../lib/theme";
+import { colors, fonts, radius, radiusLg, radiusSm, space, type } from "../lib/theme";
 import { copyText } from "../lib/clipboard";
 import { useToast } from "../components/Toast";
 
@@ -59,7 +59,15 @@ function CopyButton({ get, label, style, textStyle, showLabel = true }) {
   };
 
   return (
-    <Pressable onPress={press} style={[styles.button, copied && styles.buttonCopied, style]}>
+    <Pressable
+      onPress={press}
+      style={({ pressed }) => [
+        styles.button,
+        copied && styles.buttonCopied,
+        pressed && styles.buttonPressed,
+        style,
+      ]}
+    >
       <Text style={[type.button, { color: colors.accentInk }, textStyle]}>
         {copied ? "copied" : label}
       </Text>
@@ -261,7 +269,11 @@ export default function WebScreen() {
             <Pressable
               onPress={useRequest}
               disabled={!pasteCheck}
-              style={[styles.button, !pasteCheck && styles.buttonDisabled]}
+              style={({ pressed }) => [
+                styles.button,
+                !pasteCheck && styles.buttonDisabled,
+                pressed && pasteCheck && styles.buttonPressed,
+              ]}
             >
               <Text style={[type.button, { color: !pasteCheck ? colors.muted : colors.accentInk }]}>
                 use request
@@ -295,10 +307,15 @@ export default function WebScreen() {
               <View style={styles.buttonRow}>
                 <Pressable
                   onPress={copyUpiId}
-                  style={[styles.button, copiedId && styles.buttonCopied, styles.buttonRowItem]}
+                  style={({ pressed }) => [
+                    styles.button,
+                    copiedId && styles.buttonCopied,
+                    styles.buttonRowItem,
+                    pressed && styles.buttonPressed,
+                  ]}
                 >
                   <Text style={[type.button, { color: colors.accentInk }]}>
-                    {copiedId ? "✓ UPI ID copied" : "copy UPI ID to pay"}
+                    {copiedId ? "UPI ID copied" : "copy UPI ID to pay"}
                   </Text>
                 </Pressable>
               </View>
@@ -332,7 +349,14 @@ export default function WebScreen() {
                     />
                   ) : null}
                   {isMerchantUpi(parsed.upi) ? (
-                    <Pressable onPress={payWithUpi} style={[styles.button, styles.buttonRowItem]}>
+                    <Pressable
+                      onPress={payWithUpi}
+                      style={({ pressed }) => [
+                        styles.button,
+                        styles.buttonRowItem,
+                        pressed && styles.buttonPressed,
+                      ]}
+                    >
                       <Text style={[type.button, { color: colors.accentInk }]}>try direct UPI link</Text>
                     </Pressable>
                   ) : null}
@@ -403,7 +427,11 @@ export default function WebScreen() {
             <Pressable
               onPress={createSms}
               disabled={!mobileCheck.valid || !amountReady}
-              style={[styles.button, (!mobileCheck.valid || !amountReady) && styles.buttonDisabled]}
+              style={({ pressed }) => [
+                styles.button,
+                (!mobileCheck.valid || !amountReady) && styles.buttonDisabled,
+                pressed && (mobileCheck.valid && amountReady) && styles.buttonPressed,
+              ]}
             >
               <Text style={[type.button, { color: !mobileCheck.valid || !amountReady ? colors.muted : colors.accentInk }]}>
                 create sms
@@ -423,7 +451,14 @@ export default function WebScreen() {
                 numberOfLines={2}
               />
               <View style={styles.buttonRow}>
-                <Pressable onPress={copySms} style={[styles.button, smsCopied && styles.buttonCopied]}>
+                <Pressable
+                  onPress={copySms}
+                  style={({ pressed }) => [
+                    styles.button,
+                    smsCopied && styles.buttonCopied,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
                   <Text style={[type.button, { color: colors.accentInk }]}>
                     {smsCopied ? "copied" : "copy sms"}
                   </Text>
@@ -498,7 +533,7 @@ const styles = StyleSheet.create({
     padding: space.lg,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
   },
   field: {
@@ -506,7 +541,7 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
   },
   input: {
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radius,
@@ -523,14 +558,21 @@ const styles = StyleSheet.create({
     marginTop: space.sm,
     backgroundColor: colors.accent,
     borderRadius: radius,
+    minHeight: 44,
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
     alignItems: "center",
     justifyContent: "center",
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.97 }],
+    opacity: 0.92,
   },
   buttonDisabled: {
     backgroundColor: colors.line,
     opacity: 0.5,
+    ...(Platform.OS === "web" ? { cursor: "not-allowed" } : {}),
   },
   buttonCopied: {
     opacity: 0.85,
@@ -577,15 +619,15 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   stepNum: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.line,
     color: colors.text,
     fontSize: 12,
     fontFamily: fonts.medium,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 22,
   },
   stepText: {
     flex: 1,

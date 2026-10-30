@@ -26,7 +26,7 @@ import { getTransfer, listTransfers } from "../../lib/db";
 import { formatAge, formatDistance } from "../../lib/geo";
 import { buildTrail, decodeLocation } from "../../lib/geo";
 import { classifyQr, summariseQr } from "../../lib/qr";
-import { colors, radius, space, type } from "../../lib/theme";
+import { colors, radius, radiusLg, radiusSm, space, type } from "../../lib/theme";
 import { formatClock } from "../../lib/time";
 import { KIND } from "../../lib/transfer";
 import {
@@ -388,11 +388,11 @@ export default function TransferDetailScreen() {
               <Text style={type.label}>TRAIL</Text>
               {[...trail.points].reverse().map((point, index) => (
                 <View key={`${point.timestamp}-${index}`} style={styles.pointRow}>
-                  <Text style={type.muted}>{formatClock(point.timestamp)}</Text>
-                  <Text style={[type.muted, styles.pointCoords]}>
+                  <Text style={[type.muted, type.tabular]}>{formatClock(point.timestamp)}</Text>
+                  <Text style={[type.muted, styles.pointCoords, type.tabular]}>
                     {point.lat.toFixed(5)}, {point.lon.toFixed(5)}
                   </Text>
-                  <Text style={type.muted}>
+                  <Text style={[type.muted, type.tabular]}>
                     ±{Math.round(point.accuracy ?? 0)} m
                   </Text>
                 </View>
@@ -502,11 +502,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: space.sm,
     right: space.sm,
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radius,
+    borderRadius: radiusSm,
     backgroundColor: "rgba(11, 12, 16, 0.8)",
     borderWidth: 1,
     borderColor: colors.line,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   codeBox: {
     padding: space.lg,
     backgroundColor: "#ffffff",
-    borderRadius: radius,
+    borderRadius: radiusLg,
   },
   wrap: {
     flexWrap: "wrap",
