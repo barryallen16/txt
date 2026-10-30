@@ -36,6 +36,7 @@ import {
   parseUpiLink,
 } from "../../lib/upi";
 import { copyText } from "../../lib/clipboard";
+import { openUpiLaunchIntent } from "../../lib/upiLauncher";
 import { useToast } from "../../components/Toast";
 
 export default function TransferDetailScreen() {
@@ -169,7 +170,7 @@ export default function TransferDetailScreen() {
       if (copiedTimer.current) clearTimeout(copiedTimer.current);
       copiedTimer.current = setTimeout(() => setCopiedField(null), 2500);
       showToast({
-        message: `UPI ID ${upiParsed.pa} copied! Paste it in your UPI app.`,
+        message: `UPI ID ${upiParsed.pa} copied! Opening UPI app...`,
         type: "info",
       });
     } else {
@@ -177,6 +178,16 @@ export default function TransferDetailScreen() {
         message: "Could not copy UPI ID.",
         type: "danger",
       });
+    }
+
+    if (Platform.OS === "android") {
+      const opened = await openUpiLaunchIntent();
+      if (!opened) {
+        showToast({
+          message: `UPI ID ${upiParsed.pa} copied! Paste it in your UPI app.`,
+          type: "info",
+        });
+      }
     }
   };
 
@@ -293,10 +304,10 @@ export default function TransferDetailScreen() {
                   <AppButton
                     label={
                       copiedField === "vpa"
-                        ? "Copied! Paste in UPI app"
-                        : "Copy UPI ID to pay"
+                        ? "Copied! Opening UPI..."
+                        : "Copy UPI ID & open app"
                     }
-                    icon={copiedField === "vpa" ? "check" : "copy"}
+                    icon={copiedField === "vpa" ? "check" : "arrow-right"}
                     variant="primary"
                     onPress={copyAndOpenUpi}
                     style={styles.actionButton}

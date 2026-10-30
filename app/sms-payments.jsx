@@ -32,6 +32,7 @@ import { syncInbox, INBOX_SYNCED_EVENT } from "../lib/syncInbox";
 import { dayLabel } from "../lib/time";
 import { copyText } from "../lib/clipboard";
 import { isMerchantUpi, isPersonalUpi, normalizeAmount, parseUpiLink } from "../lib/upi";
+import { openUpiLaunchIntent } from "../lib/upiLauncher";
 import { useToast } from "../components/Toast";
 
 function dayKey(date) {
@@ -177,7 +178,7 @@ export default function SmsPaymentsScreen() {
     return [...groups.values()];
   }, [tab, openRequests, history]);
 
-  // Copy the UPI ID so the user can easily paste and pay in any UPI app.
+  // Copy the UPI ID and launch an installed UPI app's home screen cleanly.
   const copyAndOpen = async (item) => {
     const vpa = item.payee_vpa || parseUpiLink(item.upi_link || "").pa;
     if (!vpa) {
@@ -191,7 +192,7 @@ export default function SmsPaymentsScreen() {
       if (copiedTimer.current) clearTimeout(copiedTimer.current);
       copiedTimer.current = setTimeout(() => setCopiedKey(null), 2500);
       showToast({
-        message: `UPI ID ${vpa} copied! Paste in Google Pay, PhonePe or Paytm.`,
+        message: `UPI ID ${vpa} copied! Opening UPI app...`,
         type: "info",
       });
     } else {
@@ -199,6 +200,16 @@ export default function SmsPaymentsScreen() {
         message: "Could not copy UPI ID.",
         type: "danger",
       });
+    }
+
+    if (Platform.OS === "android") {
+      const opened = await openUpiLaunchIntent();
+      if (!opened) {
+        showToast({
+          message: `UPI ID ${vpa} copied! Paste it in your UPI app.`,
+          type: "info",
+        });
+      }
     }
   };
 
@@ -513,10 +524,10 @@ export default function SmsPaymentsScreen() {
                       <AppButton
                         label={
                           isPayCopied
-                            ? "Copied! Paste in UPI app"
-                            : "Copy UPI ID to pay"
+                            ? "Copied! Opening UPI..."
+                            : "Copy UPI ID & open app"
                         }
-                        icon={isPayCopied ? "check" : "copy"}
+                        icon={isPayCopied ? "check" : "arrow-right"}
                         variant="primary"
                         disabled={working || !item.payee_vpa}
                         onPress={() => copyAndOpen(item)}

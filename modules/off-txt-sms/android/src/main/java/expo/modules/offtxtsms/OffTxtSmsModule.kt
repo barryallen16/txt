@@ -259,6 +259,68 @@ class OffTxtSmsModule : Module() {
         bitmap.recycle()
       }
     }
+
+    /**
+     * Launch an installed UPI app using its launch intent (MAIN/LAUNCHER),
+     * so it opens cleanly to its home dashboard without triggering transaction errors.
+     * If multiple UPI apps are installed, presents the Android system chooser.
+     */
+    AsyncFunction("openUpiLaunchIntent") {
+      val pm = context.packageManager
+      val upiIntent = Intent(Intent.ACTION_VIEW, Uri.parse("upi://pay"))
+      val resolved = pm.queryIntentActivities(upiIntent, 0)
+
+      val launchIntents = mutableListOf<Intent>()
+      val seen = mutableSetOf<String>()
+
+      for (ri in resolved) {
+        val pkg = ri.activityInfo?.packageName ?: continue
+        if (pkg == context.packageName) continue
+        if (seen.add(pkg)) {
+          val li = pm.getLaunchIntentForPackage(pkg)
+          if (li != null) {
+            launchIntents.add(li)
+          }
+        }
+      }
+
+      val priorityPackages = listOf(
+        "com.phonepe.app",
+        "com.google.android.apps.nbu.paisa.user",
+        "net.one97.paytm",
+        "in.org.npci.upiapp",
+        "com.dreamplug.androidapp",
+        "in.amazon.mShop.android.shopping"
+      )
+
+      val sortedIntents = launchIntents.sortedBy { intent ->
+        val pkg = intent.component?.packageName ?: ""
+        val idx = priorityPackages.indexOf(pkg)
+        if (idx == -1) Int.MAX_VALUE else idx
+      }.toMutableList()
+
+      if (sortedIntents.isEmpty()) {
+        false
+      } else if (sortedIntents.size == 1) {
+        val intent = sortedIntents[0].apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val target = appContext.currentActivity ?: context
+        target.startActivity(intent)
+        true
+      } else {
+        val first = sortedIntents.removeAt(0).apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val chooser = Intent.createChooser(first, "Open UPI App").apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          putExtra(Intent.EXTRA_INITIAL_INTENTS, sortedIntents.toTypedArray())
+        }
+        val target = appContext.currentActivity ?: context
+        target.startActivity(chooser)
+        true
+      }
+    }
   }
 
   private fun toUri(source: String): Uri {
