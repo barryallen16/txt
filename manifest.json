@@ -1,7 +1,7 @@
 {
   "name": "txt",
   "short_name": "txt",
-  "description": "Send UPI payment requests over plain SMS — no data plan needed.",
+  "description": "Send pictures, QR codes, live location, and UPI payment requests over standard SMS with zero data.",
   "start_url": "/",
   "scope": "/",
   "id": "/",
