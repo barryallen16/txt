@@ -36,7 +36,7 @@ try {
   fs.rmSync(WORKTREE, { recursive: true, force: true });
 }
 
-run(`git worktree add --detach ${WORKTREE} ${BRANCH}`);
+run(`git worktree add ${WORKTREE} ${BRANCH}`);
 
 try {
   // A CNAME on gh-pages carries a custom domain - keep if one is set.

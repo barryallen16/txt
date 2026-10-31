@@ -12,6 +12,9 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.ContactsContract
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.Telephony
 import android.telephony.SmsManager
 import android.telephony.SubscriptionManager
@@ -39,13 +42,76 @@ class SendFailedException(reason: String) :
  * rather than published on Play.
  */
 class OffTxtSmsModule : Module() {
+  private var smsObserver: ContentObserver? = null
+
+  private fun registerSmsObserver() {
+    if (smsObserver != null) return
+    val ctx = appContext.reactContext ?: return
+    if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
+
+    try {
+      val handler = Handler(Looper.getMainLooper())
+      smsObserver = object : ContentObserver(handler) {
+        override fun onChange(selfChange: Boolean, uri: Uri?) {
+          super.onChange(selfChange, uri)
+          if (selfChange) return
+          if (uri != null) {
+            val s = uri.toString().lowercase()
+            if (s.contains("sent") || s.contains("outbox") || s.contains("draft")) {
+              return
+            }
+          }
+          try {
+            sendEvent("onSmsReceived", mapOf("uri" to (uri?.toString() ?: "")))
+          } catch (_: Throwable) {}
+        }
+      }
+      ctx.contentResolver.registerContentObserver(
+        Telephony.Sms.CONTENT_URI,
+        true,
+        smsObserver!!
+      )
+    } catch (_: Throwable) {}
+  }
+
+  private fun unregisterSmsObserver() {
+    val observer = smsObserver ?: return
+    try {
+      val ctx = appContext.reactContext
+      ctx?.contentResolver?.unregisterContentObserver(observer)
+    } catch (_: Throwable) {}
+    smsObserver = null
+  }
+
   private val context: Context
     get() = appContext.reactContext ?: throw CodedException("React context lost")
 
   override fun definition() = ModuleDefinition {
     Name("OffTxtSms")
 
-    Events("onSendProgress")
+    Events("onSendProgress", "onSmsReceived")
+
+    Function("startSmsObserver") {
+      registerSmsObserver()
+      true
+    }
+
+    Function("stopSmsObserver") {
+      unregisterSmsObserver()
+      true
+    }
+
+    OnActivityEntersForeground {
+      registerSmsObserver()
+    }
+
+    OnActivityEntersBackground {
+      unregisterSmsObserver()
+    }
+
+    OnDestroy {
+      unregisterSmsObserver()
+    }
 
     Function("hasSendPermission") {
       granted(Manifest.permission.SEND_SMS)
@@ -134,11 +200,14 @@ class OffTxtSmsModule : Module() {
         Telephony.Sms.DATE
       )
 
+      val selection = if (since > 0) "${Telephony.Sms.DATE} >= ?" else null
+      val selectionArgs = if (since > 0) arrayOf(since.toString()) else null
+
       val cursor = contentResolver().query(
         Telephony.Sms.Inbox.CONTENT_URI,
         projection,
-        "${Telephony.Sms.DATE} >= ?",
-        arrayOf(since.toString()),
+        selection,
+        selectionArgs,
         "${Telephony.Sms.DATE} DESC"
       )
 
@@ -186,11 +255,15 @@ class OffTxtSmsModule : Module() {
           "${ContactsContract.CommonDataKinds.Phone.IS_PRIMARY} DESC"
       )?.use { cursor ->
         val idIndex =
-          cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
+          cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
         val nameIndex =
-          cursor.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY)
+          cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY).let {
+            if (it != -1) it else cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+          }
         val numberIndex =
-          cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)
+          cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+
+        if (idIndex == -1 || numberIndex == -1) return@use
 
         while (cursor.moveToNext() && rows.size < 5000) {
           val id = cursor.getLong(idIndex).toString()
@@ -199,7 +272,7 @@ class OffTxtSmsModule : Module() {
           val number = (cursor.getString(numberIndex) ?: "").trim()
           // Contacts saved without a name use the formatted number as their
           // display name. Keep them so the picker can still reach them.
-          val name = (cursor.getString(nameIndex) ?: "").trim().ifEmpty { number }
+          val name = if (nameIndex != -1) (cursor.getString(nameIndex) ?: "").trim().ifEmpty { number } else number
           if (number.isEmpty()) continue
 
           seen.add(id)
@@ -253,6 +326,68 @@ class OffTxtSmsModule : Module() {
         )
       } finally {
         bitmap.recycle()
+      }
+    }
+
+    /**
+     * Launch an installed UPI app using its launch intent (MAIN/LAUNCHER),
+     * so it opens cleanly to its home dashboard without triggering transaction errors.
+     * If multiple UPI apps are installed, presents the Android system chooser.
+     */
+    AsyncFunction("openUpiLaunchIntent") {
+      val pm = context.packageManager
+      val upiIntent = Intent(Intent.ACTION_VIEW, Uri.parse("upi://pay"))
+      val resolved = pm.queryIntentActivities(upiIntent, 0)
+
+      val launchIntents = mutableListOf<Intent>()
+      val seen = mutableSetOf<String>()
+
+      for (ri in resolved) {
+        val pkg = ri.activityInfo?.packageName ?: continue
+        if (pkg == context.packageName) continue
+        if (seen.add(pkg)) {
+          val li = pm.getLaunchIntentForPackage(pkg)
+          if (li != null) {
+            launchIntents.add(li)
+          }
+        }
+      }
+
+      val priorityPackages = listOf(
+        "com.phonepe.app",
+        "com.google.android.apps.nbu.paisa.user",
+        "net.one97.paytm",
+        "in.org.npci.upiapp",
+        "com.dreamplug.androidapp",
+        "in.amazon.mShop.android.shopping"
+      )
+
+      val sortedIntents = launchIntents.sortedBy { intent ->
+        val pkg = intent.component?.packageName ?: ""
+        val idx = priorityPackages.indexOf(pkg)
+        if (idx == -1) Int.MAX_VALUE else idx
+      }.toMutableList()
+
+      if (sortedIntents.isEmpty()) {
+        false
+      } else if (sortedIntents.size == 1) {
+        val intent = sortedIntents[0].apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val target = appContext.currentActivity ?: context
+        target.startActivity(intent)
+        true
+      } else {
+        val first = sortedIntents.removeAt(0).apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val chooser = Intent.createChooser(first, "Open UPI App").apply {
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+          putExtra(Intent.EXTRA_INITIAL_INTENTS, sortedIntents.toTypedArray())
+        }
+        val target = appContext.currentActivity ?: context
+        target.startActivity(chooser)
+        true
       }
     }
   }

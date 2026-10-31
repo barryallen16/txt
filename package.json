@@ -1,6 +1,24 @@
 {
   "name": "txt",
-  "version": "1.0.1",
+  "version": "1.0.3",
+  "description": "Send pictures, QR codes, live location, and UPI payment requests over standard SMS. Neither phone needs cellular data or Wi-Fi.",
+  "keywords": [
+    "android",
+    "expo",
+    "react-native",
+    "sms",
+    "offline-first",
+    "upi",
+    "payments",
+    "qr-code",
+    "qr-scanner",
+    "image-compression",
+    "location-sharing",
+    "peer-to-peer",
+    "gsm7",
+    "crc32"
+  ],
+  "homepage": "https://txt.runs-on.dev",
   "main": "index.js",
   "scripts": {
     "start": "expo start",

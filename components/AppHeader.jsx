@@ -49,6 +49,7 @@ export default function AppHeader({
               numberOfLines={1}
               accessibilityLabel={`${quota.remaining} of ${quota.limit} SMS left today`}
             >
+              {quota.remaining <= 10 ? "! " : ""}
               {quota.used}/{quota.limit} SMS
             </Text>
           ) : null}
@@ -91,8 +92,8 @@ const styles = StyleSheet.create({
     marginLeft: space.xs,
   },
   quota: {
-    fontSize: 10,
-    letterSpacing: 0.5,
+    fontSize: 12,
+    letterSpacing: 1,
     fontVariant: ["tabular-nums"],
   },
   quotaLow: {

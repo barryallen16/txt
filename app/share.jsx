@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
 import PixelIcon from "../components/PixelIcon";
-import { colors, radius, space, type } from "../lib/theme";
+import { colors, radius, radiusLg, space, type } from "../lib/theme";
 
 const OPTIONS = [
   {
@@ -45,22 +46,8 @@ export default function ShareScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={["bottom"]}>
-      <AppHeader
-        title="Send"
-        onBack={goBack}
-        right={
-          <Pressable
-            onPress={() => router.push("/transfers")}
-            accessibilityRole="button"
-            accessibilityLabel="Open shared items"
-            hitSlop={12}
-            style={styles.linkButton}
-          >
-            <Text style={type.label}>INBOX</Text>
-          </Pressable>
-        }
-      />
+    <SafeAreaView style={styles.screen} edges={[]}>
+      <AppHeader title="Send" />
 
       <View style={styles.body}>
         {OPTIONS.map((option) => (
@@ -85,6 +72,7 @@ export default function ShareScreen() {
           other side needs nothing but the message.
         </Text>
       </View>
+      <BottomNav current="send" />
     </SafeAreaView>
   );
 }
@@ -106,11 +94,13 @@ const styles = StyleSheet.create({
     padding: space.lg,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
   },
   rowPressed: {
     backgroundColor: colors.line,
+    transform: [{ scale: 0.985 }],
   },
   rowText: {
     flex: 1,

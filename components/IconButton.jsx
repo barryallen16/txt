@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from "react-native";
+import { Platform, Pressable, StyleSheet } from "react-native";
 import PixelIcon from "./PixelIcon";
 import { colors, radius } from "../lib/theme";
 
@@ -38,11 +38,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius,
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
   },
   pressed: {
     backgroundColor: colors.line,
+    transform: [{ scale: 0.94 }],
   },
   disabled: {
     opacity: 0.4,
+    ...(Platform.OS === "web" ? { cursor: "not-allowed" } : {}),
   },
 });

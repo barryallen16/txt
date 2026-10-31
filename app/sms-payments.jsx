@@ -14,14 +14,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
-import * as Notifications from "expo-notifications";
+import Notifications from "../lib/notifications";
 import RNAndroidNotificationListener from "react-native-android-notification-listener";
 import AppButton from "../components/AppButton";
 import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
 import IconButton from "../components/IconButton";
 import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
-import { colors, radius, space, type } from "../lib/theme";
+import { colors, fonts, radius, radiusLg, radiusSm, space, type } from "../lib/theme";
 import {
   listHistoryRequests,
   listRequests,
@@ -31,7 +32,9 @@ import {
 import { syncInbox, INBOX_SYNCED_EVENT } from "../lib/syncInbox";
 import { dayLabel } from "../lib/time";
 import { copyText } from "../lib/clipboard";
-import { normalizeAmount, parseUpiLink } from "../lib/upi";
+import { hasReadPermission, requestSmsPermissions } from "../lib/sms";
+import { isMerchantUpi, isPersonalUpi, normalizeAmount, parseUpiLink } from "../lib/upi";
+import { openUpiLaunchIntent } from "../lib/upiLauncher";
 import { useToast } from "../components/Toast";
 
 function dayKey(date) {
@@ -63,14 +66,20 @@ export default function SmsPaymentsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notificationAccess, setNotificationAccess] = useState("checking");
+  const [smsReadGranted, setSmsReadGranted] = useState(
+    Platform.OS === "android" ? hasReadPermission() : true,
+  );
   const [pushGranted, setPushGranted] = useState(true);
   const [askingPush, setAskingPush] = useState(false);
   const [payingId, setPayingId] = useState(null);
+  const [payingDirectId, setPayingDirectId] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
   const [busy, setBusy] = useState(null);
   const [undo, setUndo] = useState(null);
   const [error, setError] = useState(null);
 
   const undoTimer = useRef(null);
+  const copiedTimer = useRef(null);
 
   const readStored = useCallback(() => {
     try {
@@ -91,9 +100,24 @@ export default function SmsPaymentsScreen() {
     }
   }, []);
 
+  const checkSmsAccess = useCallback(() => {
+    if (Platform.OS === "android") {
+      setSmsReadGranted(hasReadPermission());
+    }
+  }, []);
+
   const load = useCallback(
     async (mode = "focus") => {
-      if (mode === "refresh") setRefreshing(true);
+      if (mode === "refresh") {
+        setRefreshing(true);
+        if (Platform.OS === "android" && !hasReadPermission()) {
+          const granted = await requestSmsPermissions({ read: true });
+          setSmsReadGranted(granted);
+          if (!granted) {
+            showToast("SMS permission needed to scan missed requests.", { tone: "alert" });
+          }
+        }
+      }
       readStored();
 
       try {
@@ -104,14 +128,15 @@ export default function SmsPaymentsScreen() {
         setRefreshing(false);
       }
     },
-    [readStored],
+    [readStored, showToast],
   );
 
   useFocusEffect(
     useCallback(() => {
       load("focus");
       checkNotificationAccess();
-    }, [load, checkNotificationAccess]),
+      checkSmsAccess();
+    }, [load, checkNotificationAccess, checkSmsAccess]),
   );
 
   // The background inbox poll can store a request while this screen is open.
@@ -127,14 +152,18 @@ export default function SmsPaymentsScreen() {
   // the user comes back to the app.
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (next) => {
-      if (next === "active") checkNotificationAccess();
+      if (next === "active") {
+        checkNotificationAccess();
+        checkSmsAccess();
+      }
     });
     return () => subscription.remove();
-  }, [checkNotificationAccess]);
+  }, [checkNotificationAccess, checkSmsAccess]);
 
   useEffect(
     () => () => {
       if (undoTimer.current) clearTimeout(undoTimer.current);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
     },
     [],
   );
@@ -173,25 +202,79 @@ export default function SmsPaymentsScreen() {
     return [...groups.values()];
   }, [tab, openRequests, history]);
 
-  // The link is opened exactly as it arrived. UPI apps that ignore an amount
-  // in an unsigned intent get the amount from the copy button instead.
-  const pay = async (item) => {
-    if (!item.upi_link) return;
+  // Copy the UPI ID and launch an installed UPI app's home screen cleanly.
+  const copyAndOpen = async (item) => {
+    const vpa = item.payee_vpa || parseUpiLink(item.upi_link || "").pa;
+    if (!vpa) {
+      showToast({ message: "No UPI ID found in this request.", type: "danger" });
+      return;
+    }
 
+    const ok = await copyText(vpa);
+    if (ok) {
+      setCopiedKey(`pay:${item.id}`);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedKey(null), 2500);
+      showToast({
+        message: `UPI ID ${vpa} copied! Opening UPI app...`,
+        type: "info",
+      });
+    } else {
+      showToast({
+        message: "Could not copy UPI ID.",
+        type: "danger",
+      });
+    }
+
+    if (Platform.OS === "android") {
+      const opened = await openUpiLaunchIntent();
+      if (!opened) {
+        showToast({
+          message: `UPI ID ${vpa} copied! Paste it in your UPI app.`,
+          type: "info",
+        });
+      }
+    }
+  };
+
+  const payDirect = async (item) => {
+    if (!item.upi_link) return;
     setError(null);
-    setPayingId(item.id);
+    setPayingDirectId(item.id);
     try {
       await Linking.openURL(item.upi_link);
     } catch {
-      setError("No UPI app could open this request.");
+      setError("No UPI app could open this direct link.");
     } finally {
-      setPayingId(null);
+      setPayingDirectId(null);
     }
+  };
+
+  const copyVpa = async (item) => {
+    const vpa = item.payee_vpa || parseUpiLink(item.upi_link || "").pa;
+    if (!vpa) return;
+    const ok = await copyText(vpa);
+    if (ok) {
+      setCopiedKey(`vpa:${item.id}`);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedKey(null), 1800);
+    }
+    showToast({
+      message: ok
+        ? `UPI ID ${vpa} copied. Paste in Google Pay, PhonePe or Paytm.`
+        : "Could not copy the UPI ID.",
+      type: ok ? "info" : "danger",
+    });
   };
 
   const copyAmount = async (item) => {
     if (!item.amount) return;
     const ok = await copyText(item.amount);
+    if (ok) {
+      setCopiedKey(`amt:${item.id}`);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedKey(null), 1800);
+    }
     showToast({
       message: ok
         ? `Amount ₹${item.amount} copied. Paste it in your UPI app.`
@@ -221,6 +304,7 @@ export default function SmsPaymentsScreen() {
       setRequestStatus(undo.id, undo.previous);
       readStored();
       if (undo.previous === "open") setTab("open");
+      showToast({ message: "Request restored to open.", type: "info" });
     } catch {
       setError("Could not undo that change.");
     }
@@ -232,6 +316,7 @@ export default function SmsPaymentsScreen() {
       setRequestStatus(item.id, "open");
       readStored();
       setTab("open");
+      showToast({ message: "Request moved back to open.", type: "info" });
     } catch {
       setError("Could not reopen that request.");
     }
@@ -263,10 +348,9 @@ export default function SmsPaymentsScreen() {
   const showLoading = loading && rows.length === 0;
 
   return (
-    <SafeAreaView style={styles.screen} edges={["bottom"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
       <AppHeader
         title="Requests"
-        onBack={() => (router.canGoBack() ? router.back() : router.replace("/"))}
         right={
           refreshing ? (
             <ActivityIndicator color={colors.muted} style={styles.headerSpinner} />
@@ -302,6 +386,27 @@ export default function SmsPaymentsScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {Platform.OS === "android" && !smsReadGranted ? (
+        <View style={styles.accessCard}>
+          <View style={styles.accessText}>
+            <PixelIcon name="message-text" size={24} color={colors.coral || colors.accent} />
+            <Text style={type.bodyMedium}>SMS Inbox access is off</Text>
+            <Text style={type.muted}>
+              Allow SMS access so swiped, dismissed, or missed payment requests can be recovered from your inbox on reload.
+            </Text>
+          </View>
+          <AppButton
+            label="Allow SMS access"
+            variant="primary"
+            onPress={async () => {
+              const granted = await requestSmsPermissions({ read: true });
+              setSmsReadGranted(granted);
+              if (granted) load("refresh");
+            }}
+          />
+        </View>
+      ) : null}
 
       {Platform.OS === "android" && notificationAccess !== "authorized" ? (
         <View style={styles.accessCard}>
@@ -383,27 +488,65 @@ export default function SmsPaymentsScreen() {
           renderItem={({ item }) => {
             const handled = tab === "history";
             const paying = payingId === item.id;
+            const payingDirect = payingDirectId === item.id;
             const working = busy != null;
+            const isPersonal = isPersonalUpi(item.upi_link || "");
+            const isMerchant = isMerchantUpi(item.upi_link || "");
+
+            const isPayCopied = copiedKey === `pay:${item.id}`;
+            const isAmtCopied = copiedKey === `amt:${item.id}`;
+            const isVpaCopied = copiedKey === `vpa:${item.id}`;
 
             return (
-              <View style={styles.row}>
-                <View style={styles.rowTop}>
-                  <Text style={[type.bodyMedium, styles.payee]} numberOfLines={1}>
-                    {item.payee_name || "Unknown payee"}
-                  </Text>
-                  <Text style={type.amountSmall}>
-                    {item.amount ? `₹${item.amount}` : "No amount"}
-                  </Text>
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.amountBlock}>
+                    <Text style={type.label}>MONEY REQUESTED</Text>
+                    <Text style={styles.prominentAmount} numberOfLines={1}>
+                      {item.amount ? `₹${item.amount}` : "No amount set"}
+                    </Text>
+                  </View>
+                  <View style={styles.payeeInfo}>
+                    <Text style={type.label}>PAYEE</Text>
+                    <Text style={[type.bodyMedium, styles.payeeName]} numberOfLines={1}>
+                      {item.payee_name || "Unknown payee"}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={type.muted} numberOfLines={1}>
-                  {item.payee_vpa || "No VPA"}
-                </Text>
+
+                <View style={styles.vpaRow}>
+                  <Text style={[type.muted, styles.vpaText]} numberOfLines={1}>
+                    {item.payee_vpa ? `UPI ID: ${item.payee_vpa}` : "No VPA"}
+                  </Text>
+                  {item.payee_vpa ? (
+                    <Pressable
+                      onPress={() => copyVpa(item)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Copy UPI ID"
+                      hitSlop={8}
+                      style={({ pressed }) => [
+                        styles.vpaCopyChip,
+                        isVpaCopied && styles.vpaCopyChipActive,
+                        pressed && styles.vpaCopyChipPressed,
+                      ]}
+                    >
+                      <PixelIcon
+                        name="copy"
+                        size={12}
+                        color={isVpaCopied ? colors.accentInk : colors.accent}
+                      />
+                      <Text style={[styles.vpaCopyText, isVpaCopied && styles.vpaCopyTextActive]}>
+                        {isVpaCopied ? "Copied" : "Copy"}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
 
                 <View style={styles.meta}>
                   <Text style={type.muted} numberOfLines={1}>
                     {item.sender ? `From ${item.sender}` : "Unknown sender"}
                   </Text>
-                  <Text style={type.muted}>
+                  <Text style={[type.muted, type.tabular]}>
                     {timeOf(item.date)}
                     {handled ? ` · ${dayLabel(item.date)}` : ""}
                   </Text>
@@ -427,37 +570,58 @@ export default function SmsPaymentsScreen() {
                   <>
                     <View style={styles.actions}>
                       <AppButton
-                        label={payingId === item.id ? "Opening UPI" : "Pay now"}
-                        icon="arrow-right"
-                        loading={payingId === item.id}
-                        disabled={working || !item.upi_link}
-                        onPress={() => pay(item)}
+                        label={
+                          isPayCopied
+                            ? "Copied! Opening UPI..."
+                            : "Copy UPI ID & open app"
+                        }
+                        icon={isPayCopied ? "check" : "arrow-right"}
+                        variant="primary"
+                        disabled={working || !item.payee_vpa}
+                        onPress={() => copyAndOpen(item)}
                         style={styles.actionButton}
                       />
-                      {item.amount ? (
-                        <AppButton
-                          label={`Copy \u20B9${item.amount}`}
-                          icon="rupee"
-                          variant="outline"
-                          disabled={working}
-                          onPress={() => copyAmount(item)}
-                          style={styles.actionButton}
-                        />
-                      ) : null}
                     </View>
+
+                    {item.amount || isMerchant ? (
+                      <View style={styles.actions}>
+                        {item.amount ? (
+                          <AppButton
+                            label={isAmtCopied ? "Copied" : `Copy \u20B9${item.amount}`}
+                            icon="rupee"
+                            variant="outline"
+                            disabled={working || paying || payingDirect}
+                            onPress={() => copyAmount(item)}
+                            style={styles.actionButton}
+                          />
+                        ) : null}
+                        {isMerchant ? (
+                          <AppButton
+                            label={payingDirect ? "Opening UPI..." : "Try direct UPI link"}
+                            icon="arrow-right"
+                            variant="outline"
+                            loading={payingDirect}
+                            disabled={working || paying || !item.upi_link}
+                            onPress={() => payDirect(item)}
+                            style={styles.actionButton}
+                          />
+                        ) : null}
+                      </View>
+                    ) : null}
+
                     <Text style={[type.muted, styles.payHint]}>
-                      {"Your UPI app opens without an amount. Use the copy button to paste "}
-                      {"\u20B9"}
-                      {item.amount ?? "the amount"}
-                      {" into it."}
+                      {isPersonal
+                        ? "NPCI restricts direct links for personal accounts. The UPI ID is copied so you can paste it in your UPI app."
+                        : "Merchant request verified. You can use direct link or copy details to pay."}
                     </Text>
+
                     <View style={styles.actions}>
                       <AppButton
                         label="Mark done"
                         icon="check"
                         variant="outline"
                         loading={busy === `${item.id}:done`}
-                        disabled={working || paying}
+                        disabled={working || paying || payingDirect}
                         onPress={() => handle(item, "done")}
                         style={styles.actionButton}
                       />
@@ -466,7 +630,7 @@ export default function SmsPaymentsScreen() {
                         icon="close"
                         variant="ghost"
                         loading={busy === `${item.id}:dismissed`}
-                        disabled={working || paying}
+                        disabled={working || paying || payingDirect}
                         onPress={() => handle(item, "dismissed")}
                         style={styles.actionButton}
                       />
@@ -491,10 +655,19 @@ export default function SmsPaymentsScreen() {
                   ? "A request arrives when an SMS contains a :txt UPI link. The app checks messages on this phone every few seconds."
                   : "Mark a request done or dismiss it, and it lands here."}
               </Text>
+              {tab === "open" ? (
+                <AppButton
+                  label="Create request"
+                  icon="rupee"
+                  variant="outline"
+                  onPress={() => router.push("/pay/manual")}
+                />
+              ) : null}
             </View>
           }
         />
       )}
+      <BottomNav current="requests" />
     </SafeAreaView>
   );
 }
@@ -589,36 +762,92 @@ const styles = StyleSheet.create({
     paddingTop: space.lg,
     paddingBottom: space.sm,
   },
-  row: {
+  card: {
+    gap: space.sm,
+    padding: space.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radiusLg,
+    backgroundColor: colors.panel,
+    marginBottom: space.md,
+  },
+  cardHeader: {
     gap: space.xs,
-    paddingVertical: space.lg,
+    paddingBottom: space.xs,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
-  rowTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md,
+  amountBlock: {
+    gap: 2,
+    marginBottom: 4,
   },
-  payee: {
-    flex: 1,
+  prominentAmount: {
+    fontFamily: fonts.semibold,
+    fontSize: 28,
+    lineHeight: 34,
+    color: colors.text,
+    fontVariant: ["tabular-nums"],
+  },
+  payeeInfo: {
+    gap: 2,
+  },
+  payeeName: {
+    fontSize: 16,
+    color: colors.text,
   },
   meta: {
     flexDirection: "row",
     alignItems: "center",
     gap: space.md,
-    marginTop: space.sm,
+    marginTop: 2,
   },
   actions: {
     flexDirection: "row",
     gap: space.sm,
-    marginTop: space.sm,
+    marginTop: space.xs,
   },
   actionButton: {
     flex: 1,
   },
   payHint: {
     marginTop: space.xs,
+  },
+  vpaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  vpaText: {
+    flexShrink: 1,
+  },
+  vpaCopyChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radiusSm,
+    backgroundColor: colors.panel,
+    ...(Platform.OS === "web" ? { cursor: "pointer", userSelect: "none" } : {}),
+  },
+  vpaCopyChipPressed: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.85,
+  },
+  vpaCopyChipActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  vpaCopyText: {
+    fontSize: 10,
+    fontFamily: fonts.medium,
+    color: colors.accent,
+    textTransform: "uppercase",
+  },
+  vpaCopyTextActive: {
+    color: colors.accentInk,
   },
   handledRow: {
     flexDirection: "row",

@@ -1,29 +1,20 @@
 # txt
 
-Send pictures, QR codes, current or live location, and UPI payment requests over SMS.
-Neither phone needs a data plan to send or receive the message.
-A UPI payment still needs the payer's UPI app and its own connection.
+Send pictures, QR codes, live location, and UPI payment requests over standard SMS.
+Neither phone needs cellular data or Wi-Fi to transmit or receive items.
+A UPI payment still completes through the payer's installed UPI app.
+
+[Live Web Companion](https://txt.runs-on.dev) · [Releases & APKs](https://github.com/barryallen16/txt/releases) · [Report Issue](https://github.com/barryallen16/txt/issues)
 
 ## What it does
 
-- Payments: scan a UPI QR code, enter an amount, and send the request by SMS.
-  The recipient opens the link in their UPI app.
-  Amounts go into the link as UPI intent fields: `pa`, `pn`, `am`, `cu`, and `tr`/`tn` when present.
-  A signed link that already carries an amount is kept byte for byte so its signature stays valid.
-  Links that need an amount added follow the [NPCI UPI linking specification](https://www.labnol.org/files/linking.pdf) and are unsigned, so the payer's UPI app may ask them to verify the source.
-- Images: pick a photo.
-  The app turns it into a grayscale, posterized JPEG and sends it as a series of SMS parts.
-  Fast aims for 1.2 KB, Balanced 1.8 KB, and High detail 2.8 KB.
-  The other phone reassembles it.
-- QR codes: scan or paste any QR code text.
-  The text goes over SMS, and the recipient rebuilds the same code, whether it started as a metro ticket, a boarding pass or something else.
-- Location: send one current location, or share live updates for a set interval.
-  Each update arrives as an SMS.
-- SMS quota: the app counts its own outgoing messages and stops at 100 per day, India's per-SIM limit.
-  The header shows the used count out of 100, and it resets at local midnight.
+- **UPI Payments:** Scan a UPI QR code or enter a 10-digit mobile number or VPA directly, specify an optional amount, and send the request via SMS. The recipient taps the link or copies the payee VPA into any installed UPI app (GPay, PhonePe, Paytm, BHIM). Signed merchant links preserve their exact parameters and base64 signatures byte-for-byte.
+- **Images:** Pick any photo. The app downscales, posterizes, and compresses it into a grayscale payload split across numbered SMS chunks. Fast targets ~1.2 KB, Balanced ~1.8 KB, and High detail ~2.8 KB. The receiving device reassembles the image automatically.
+- **QR Codes:** Scan or paste tickets, boarding passes, or payment codes. The raw text travels over SMS, and the recipient reconstructs the original QR code on their screen.
+- **Live Location:** Send a one-time coordinate pin, or broadcast live updates every 30 seconds, 1 minute, or 5 minutes over SMS.
+- **100 SMS/Day Safety Guard:** Sends run on your cellular SIM carrier allowance. To protect against accidental overages and comply with TRAI per-SIM daily anti-spam limits in India, the app tracks outgoing volume and stops transmission at 100 SMS/day. The counter resets at local midnight.
 
-Pictures, codes, locations and payment requests all use a custom chunked protocol with CRC32 checksums and automatic reassembly.
-A native Android module handles silent `SEND_SMS` and reads the SMS inbox, so multipart messages arrive intact.
+Transfers use a custom chunked protocol with CRC32 checksums and automatic out-of-order reassembly. A native Android module manages background telephony SMS detection and direct sends.
 
 ## Quick start
 
@@ -31,13 +22,13 @@ A native Android module handles silent `SEND_SMS` and reads the SMS inbox, so mu
 # Install dependencies
 bun install
 
-# Start development server
+# Start Metro bundler
 bun start
 
-# Run on Android (requires a native build for the SMS module)
+# Run on Android (requires a development build for the native SMS module)
 bun android
 
-# Run tests
+# Run test suite
 bun test
 
 # Type check
@@ -46,76 +37,64 @@ bun run typecheck
 
 ## Requirements
 
-- Android phone with a SIM that can send SMS
+- Android phone (Android 8.0+) with an active SIM card
+- Node.js 18+ and Bun 1.4+
 - Expo SDK 54 / React Native 0.81
-- Bun 1.4+
 
-The app asks for SMS, notification, camera, contacts and location access when a feature needs it.
-Notification-listener access is granted in Android settings.
+The app requests SMS, notification, camera, contacts, and location permissions as needed. Background notification listener access is enabled via Android Settings.
 
-The native SMS module lives in `modules/off-txt-sms` and is linked through Expo autolinking.
-It needs a development build, so Expo Go won't work.
+The native SMS module lives in `modules/off-txt-sms` and links via Expo autolinking. Because it interacts directly with Android telephony hardware, it requires a native development build (Expo Go is not supported).
 
 ## Architecture
 
 ```
 app/                 # Expo Router screens
-  share/             # Image, QR, location sending
-  transfers/         # Received items inbox
-  pay/               # UPI payment flow
-components/          # Shared UI (buttons, icons, recipient picker)
-lib/                 # Pure logic, no React dependencies
-  base64.js          # URL-safe base64
-  transfer.js        # Chunked SMS protocol (encode/decode/CRC32)
-  geo.js             # Location encoding
-  image.js           # Grayscale posterized JPEG compression
-  ingest.js          # Reassemble incoming parts
-  syncInbox.js       # Background inbox sync
-  sms.js             # Native module wrapper
-  db.js              # SQLite (payments + transfers)
-modules/off-txt-sms/ # Native Android module (Kotlin)
+  share/             # Image, QR, location, and manual pay flows
+  transfers/         # Incoming transfers inbox and detail view
+  pay/               # UPI request creation and manual entry
+  sms-payments.jsx   # Payment requests inbox & history tabs
+  permissions.jsx    # Permissions setup and diagnostic checks
+  index.web.jsx      # Web companion & documentation landing page
+components/          # Reusable UI (buttons, headers, pixel icons)
+lib/                 # Pure application logic and SQLite persistence
+  transfer.js        # Chunked SMS protocol (GSM-7 framing, CRC32)
+  image.js           # Adaptive grayscale posterized JPEG compression
+  syncInbox.js       # SMS inbox reader and ContentProvider sync
+  db.js              # On-device SQLite database
+  upi.js             # NPCI UPI URL parser, validator, and builder
+  upiLauncher.js     # Native Android package launch intent dispatcher
+modules/off-txt-sms/ # Native Android telephony Kotlin module
 ```
 
 ## Implementation details
 
-- SMS protocol: each part is `ot1.<id>.<kind>.<seq>.<total>.<crc>.<chunk>`.
-  Every field is base36, and one part fits in a single GSM-7 segment of 153 characters.
-  The receiver reassembles the parts.
-- Image compression: grayscale, posterization and resizing to the selected target, then the payload is split into parts.
-  The three presets aim for 1.2 KB, 1.8 KB and 2.8 KB.
-- SMS quota: every send goes through `lib/sms.js`, which records the segments after the radio accepts them.
-  `lib/quota.js` keeps the daily count and resets it after local midnight.
-- Background listener: a Headless JS task reads SMS notifications and ingests parts as they arrive.
-  An inbox sync runs on launch, every 10 seconds while the app is open, and on refresh.
-- Fonts: Saira for body text and Geist Pixel for display, both loaded at runtime with expo-font.
+- **GSM-7 Protocol:** Each part is formatted as `ot1.<id>.<kind>.<seq>.<total>.<crc>.<chunk>`. Every field is base36, and each part fits inside a single 153-character GSM-7 segment.
+- **Image Compression:** Dynamic grayscale conversion and posterization steps down through resolutions until the payload meets the target byte budget.
+- **Deduplication & Reassembly:** Parts and requests are indexed in SQLite with unique SMS identifiers. Corrupted packets fail CRC32 verification and trigger missing chunk indicators.
+- **Inbox Sync & Telephony Observer:** A native Android `ContentObserver` detects incoming SMS in under 100ms when the app is active. Background headless listeners process incoming transfer notifications while the app is closed.
+- **Daily Cap:** Every outgoing dispatch checks `lib/quota.js`. Once 100 messages are sent within a 24-hour cycle, outgoing transfers pause until midnight.
+
+## Web Companion & PWA
+
+A progressive web app is hosted at [`https://txt.runs-on.dev`](https://txt.runs-on.dev). It provides a full showcase, sideloading installation guide, and an offline utility tool for iOS users or desktop browsers:
+
+- Paste a received `:txt` SMS to extract payee information, render a scannable QR code, and open UPI payment apps.
+- Compose manual `:txt` payment request messages to send through any phone's messaging client.
+- Functions offline via a service worker cache.
+
+To export and test the web build locally:
+
+```bash
+bun run web:pwa
+```
 
 ## Testing
 
 ```bash
-bun test          # all tests
-bun run typecheck # TypeScript strict mode
+bun test          # 93 passing unit tests
+bun run typecheck # TypeScript strict mode verification
 ```
-
-## Issues
-
-Report bugs and feature requests at https://github.com/barryallen16/txt/issues.
-
-## Web version
-
-A web version lives at the `/web` route for people who do not have the app installed — useful for iOS users and demos. It is a PWA, so it can be added to the home screen and keeps working offline after the first visit.
-
-Build it:
-
-```
-bun run web:pwa
-```
-
-This exports a static site to `dist/`. A built copy is already on the `gh-pages` branch, so you can turn on GitHub Pages for that branch and the site is available at `https://barryallen16.github.io/txt/web`.
-
-The web version is copy-paste only: paste a received `:txt Pay Rs …` SMS to open a payment request and pay, or build a formatted SMS, copy it, and send it from your phone's SMS app. It cannot send or receive SMS, read QR codes from the camera, or share location — browsers do not give websites access to SMS, and iOS does not expose SMS at all. Those features need the native Android app.
-
-Service workers and any camera use require HTTPS. GitHub Pages serves over HTTPS, so the PWA works there; plain `http://` will not.
 
 ## License
 
-MIT
+MIT License. Copyright (c) 2026 barryallen16.

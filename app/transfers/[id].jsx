@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -26,14 +26,17 @@ import { getTransfer, listTransfers } from "../../lib/db";
 import { formatAge, formatDistance } from "../../lib/geo";
 import { buildTrail, decodeLocation } from "../../lib/geo";
 import { classifyQr, summariseQr } from "../../lib/qr";
-import { colors, radius, space, type } from "../../lib/theme";
+import { colors, radius, radiusLg, radiusSm, space, type } from "../../lib/theme";
 import { formatClock } from "../../lib/time";
 import { KIND } from "../../lib/transfer";
 import {
   buildRequestLink,
+  isMerchantUpi,
+  isPersonalUpi,
   parseUpiLink,
 } from "../../lib/upi";
 import { copyText } from "../../lib/clipboard";
+import { openUpiLaunchIntent } from "../../lib/upiLauncher";
 import { useToast } from "../../components/Toast";
 
 export default function TransferDetailScreen() {
@@ -41,6 +44,15 @@ export default function TransferDetailScreen() {
   const insets = useSafeAreaInsets();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
+  const copiedTimer = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
   const transfer = useMemo(
     () => getTransfer(Number(id)) ?? null,
     [id],
@@ -49,7 +61,13 @@ export default function TransferDetailScreen() {
 
   // Open the link byte-for-byte as it arrived - nothing is rewritten here.
   // buildRequestLink now only validates and reads the amount back.
-  const upiAmount = transfer && parseUpiLink(transfer.payload ?? "").valid
+  const upiParsed = useMemo(() => {
+    if (!transfer || transfer.kind !== KIND.QR) return null;
+    const parsed = parseUpiLink(transfer.payload ?? "");
+    return parsed.valid ? parsed : null;
+  }, [transfer]);
+
+  const upiAmount = upiParsed
     ? buildRequestLink(transfer.payload).amount
     : null;
 
@@ -144,13 +162,61 @@ export default function TransferDetailScreen() {
     }
   };
 
+  const copyAndOpenUpi = async () => {
+    if (!upiParsed?.pa) return;
+    const ok = await copyText(upiParsed.pa);
+    if (ok) {
+      setCopiedField("vpa");
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedField(null), 2500);
+      showToast({
+        message: `UPI ID ${upiParsed.pa} copied! Opening UPI app...`,
+        type: "info",
+      });
+    } else {
+      showToast({
+        message: "Could not copy UPI ID.",
+        type: "danger",
+      });
+    }
+
+    if (Platform.OS === "android") {
+      const opened = await openUpiLaunchIntent();
+      if (!opened) {
+        showToast({
+          message: `UPI ID ${upiParsed.pa} copied! Paste it in your UPI app.`,
+          type: "info",
+        });
+      }
+    }
+  };
+
   const copyUpiAmount = async () => {
     if (!upiAmount) return;
     const ok = await copyText(upiAmount);
+    if (ok) {
+      setCopiedField("amt");
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedField(null), 1800);
+    }
     showToast({
       message: ok
         ? `Amount \u20B9${upiAmount} copied. Paste it in your UPI app.`
         : "Could not copy the amount.",
+      type: ok ? "info" : "danger",
+    });
+  };
+
+  const copyTextMessage = async () => {
+    if (!transfer?.payload) return;
+    const ok = await copyText(transfer.payload);
+    if (ok) {
+      setCopiedField("text");
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedField(null), 1800);
+    }
+    showToast({
+      message: ok ? "Message copied." : "Could not copy message.",
       type: ok ? "info" : "danger",
     });
   };
@@ -223,28 +289,70 @@ export default function TransferDetailScreen() {
             <Text style={[type.body, styles.wrap]}>
               {summariseQr(transfer.payload)}
             </Text>
-            {parseUpiLink(transfer.payload).valid ? (
-              <>
-                <AppButton
-                  label="Pay with UPI"
-                  icon="arrow-right"
-                  onPress={() => openUpiPayment(transfer.payload)}
-                />
-                {upiAmount ? (
+            {upiParsed ? (
+              <View style={styles.upiActionsBlock}>
+                {isPersonalUpi(upiParsed) ? (
+                  <View style={styles.upiNotice}>
+                    <PixelIcon name="info" size={16} color={colors.accent} />
+                    <Text style={[type.muted, styles.upiNoticeText]}>
+                      NPCI restricts direct app links for personal accounts. Point another phone's camera at this QR code to pay, or copy the UPI ID below to pay from this device.
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.upiButtons}>
                   <AppButton
-                    label={`Copy \u20B9${upiAmount}`}
-                    icon="rupee"
+                    label={
+                      copiedField === "vpa"
+                        ? "Copied! Opening UPI..."
+                        : "Copy UPI ID & open app"
+                    }
+                    icon={copiedField === "vpa" ? "check" : "arrow-right"}
+                    variant="primary"
+                    onPress={copyAndOpenUpi}
+                    style={styles.actionButton}
+                  />
+                  {upiAmount ? (
+                    <AppButton
+                      label={
+                        copiedField === "amt"
+                          ? "Copied"
+                          : `Copy \u20B9${upiAmount}`
+                      }
+                      icon="rupee"
+                      variant="outline"
+                      onPress={copyUpiAmount}
+                      style={styles.actionButton}
+                    />
+                  ) : null}
+                </View>
+
+                {isMerchantUpi(upiParsed) ? (
+                  <AppButton
+                    label="Try direct UPI link"
+                    icon="arrow-right"
                     variant="outline"
-                    onPress={copyUpiAmount}
+                    onPress={() => openUpiPayment(transfer.payload)}
+                    style={styles.actionButton}
                   />
                 ) : null}
-              </>
+              </View>
+
             ) : null}
           </View>
         ) : null}
 
         {transfer.kind === KIND.TEXT ? (
-          <Text style={[type.body, styles.wrap]}>{transfer.payload}</Text>
+          <View style={styles.textBlock}>
+            <Text style={[type.body, styles.wrap]}>{transfer.payload}</Text>
+            <AppButton
+              label={copiedField === "text" ? "Copied" : "Copy message"}
+              icon="copy"
+              variant="outline"
+              onPress={copyTextMessage}
+              style={styles.textCopyButton}
+            />
+          </View>
         ) : null}
 
         {transfer.kind === KIND.LOCATION && trail ? (
@@ -280,11 +388,11 @@ export default function TransferDetailScreen() {
               <Text style={type.label}>TRAIL</Text>
               {[...trail.points].reverse().map((point, index) => (
                 <View key={`${point.timestamp}-${index}`} style={styles.pointRow}>
-                  <Text style={type.muted}>{formatClock(point.timestamp)}</Text>
-                  <Text style={[type.muted, styles.pointCoords]}>
+                  <Text style={[type.muted, type.tabular]}>{formatClock(point.timestamp)}</Text>
+                  <Text style={[type.muted, styles.pointCoords, type.tabular]}>
                     {point.lat.toFixed(5)}, {point.lon.toFixed(5)}
                   </Text>
-                  <Text style={type.muted}>
+                  <Text style={[type.muted, type.tabular]}>
                     ±{Math.round(point.accuracy ?? 0)} m
                   </Text>
                 </View>
@@ -394,11 +502,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: space.sm,
     right: space.sm,
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radius,
+    borderRadius: radiusSm,
     backgroundColor: "rgba(11, 12, 16, 0.8)",
     borderWidth: 1,
     borderColor: colors.line,
@@ -432,10 +540,44 @@ const styles = StyleSheet.create({
   codeBox: {
     padding: space.lg,
     backgroundColor: "#ffffff",
-    borderRadius: radius,
+    borderRadius: radiusLg,
   },
   wrap: {
     flexWrap: "wrap",
+  },
+  textBlock: {
+    gap: space.md,
+  },
+  textCopyButton: {
+    alignSelf: "flex-start",
+  },
+  actionButton: {
+    alignSelf: "stretch",
+    flex: 1,
+  },
+  upiActionsBlock: {
+    alignSelf: "stretch",
+    gap: space.sm,
+    marginTop: space.sm,
+  },
+  upiButtons: {
+    flexDirection: "row",
+    gap: space.sm,
+  },
+  upiNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: space.sm,
+    padding: space.sm,
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius,
+  },
+  upiNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
   },
   locationBlock: {
     gap: space.md,

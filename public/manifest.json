@@ -1,13 +1,14 @@
 {
   "name": "txt",
   "short_name": "txt",
-  "description": "Send UPI payment requests over plain SMS — no data plan needed.",
-  "start_url": "./web",
+  "description": "Send pictures, QR codes, live location, and UPI payment requests over standard SMS with zero data.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#0b0c10",
   "theme_color": "#7c5cff",
   "orientation": "portrait",
-  "scope": "./",
   "icons": [
     {
       "src": "./icons/icon-192.png",
@@ -20,9 +21,18 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["finance", "utilities"],
+  "categories": [
+    "finance",
+    "utilities"
+  ],
   "lang": "en",
   "dir": "ltr"
 }

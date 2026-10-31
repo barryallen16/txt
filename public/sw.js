@@ -10,18 +10,31 @@
 const CACHE_NAME = "txt-v%CACHE_NAME%";
 const ASSETS = [
   "./",
-  "./web",
   "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/icon-maskable-512.png",
   "./favicon.ico",
 ];
 
 // Install: cache the app shell
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.allSettled(
+        ASSETS.map(async (asset) => {
+          try {
+            const response = await fetch(asset);
+            if (response.ok) {
+              await cache.put(asset, response);
+            }
+          } catch (err) {
+            console.warn("PWA SW: failed to cache", asset, err);
+          }
+        })
+      );
+    })
   );
   self.skipWaiting();
 });

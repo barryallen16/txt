@@ -13,16 +13,16 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useFocusEffect } from "expo-router";
 import AppButton from "../components/AppButton";
 import AppHeader from "../components/AppHeader";
+import BottomNav from "../components/BottomNav";
 import IconButton from "../components/IconButton";
 import Loading from "../components/Loading";
 import PixelIcon from "../components/PixelIcon";
-import { colors, radius, space, type } from "../lib/theme";
+import { colors, radius, radiusLg, space, type } from "../lib/theme";
 import { getPermissionSnapshot, needsSetup } from "../lib/permissions";
 import { encodeLinkParam, normalizeAmount, parseUpiLink } from "../lib/upi";
+import WebScreen from "./web";
 
 export default function ScannerScreen() {
-  // Redirect the web build in an effect, never during render: render-time
-  // navigation runs before the navigator mounts and silently no-ops.
   const isWeb = Platform.OS === "web";
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [facing, setFacing] = useState("back");
@@ -36,12 +36,6 @@ export default function ScannerScreen() {
   );
   const scanLock = useRef(false);
   const navTimer = useRef(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (isWeb) router.replace("/web");
-    }, [isWeb]),
-  );
 
   useFocusEffect(
     useCallback(() => {
@@ -135,9 +129,9 @@ export default function ScannerScreen() {
     setScanned(false);
   };
 
-  // Native-only screen: the web build lands on /web. Placed after every hook
+  // Native-only screen: the web build lands on WebScreen. Placed after every hook
   // so Rules of Hooks stay intact across the platform branch.
-  if (isWeb) return null;
+  if (isWeb) return <WebScreen />;
 
   const setupNeeded = needsSetup(setup);
   const pausedLabel = scanned
@@ -147,30 +141,20 @@ export default function ScannerScreen() {
     : "Camera paused";
 
   return (
-    <SafeAreaView style={styles.screen} edges={["bottom"]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
       <AppHeader
         showLogo
         right={
           <View style={styles.headerActions}>
             <IconButton
+              icon="star"
+              label="Star on GitHub"
+              onPress={() => Linking.openURL("https://github.com/barryallen16/txt")}
+            />
+            <IconButton
               icon="info"
               label="How txt works"
               onPress={() => router.push("/how-it-works")}
-            />
-            <IconButton
-              icon="shield"
-              label="Permissions"
-              onPress={() => router.push("/permissions")}
-            />
-            <IconButton
-              icon="send"
-              label="Send something"
-              onPress={() => router.push("/share")}
-            />
-            <IconButton
-              icon="inbox"
-              label="Open shared items"
-              onPress={() => router.push("/transfers")}
             />
           </View>
         }
@@ -286,6 +270,7 @@ export default function ScannerScreen() {
           to create a request.
         </Text>
       </View>
+      <BottomNav current="scan" />
     </SafeAreaView>
   );
 }
@@ -298,7 +283,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: space.xs,
   },
   setupBanner: {
     flexDirection: "row",
@@ -309,11 +294,12 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
   },
   setupBannerPressed: {
     backgroundColor: colors.line,
+    transform: [{ scale: 0.985 }],
   },
   setupText: {
     flex: 1,
@@ -331,7 +317,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     overflow: "hidden",
     backgroundColor: colors.panel,
   },
@@ -372,7 +358,7 @@ const styles = StyleSheet.create({
     padding: space.xl,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius,
+    borderRadius: radiusLg,
     backgroundColor: colors.panel,
   },
   center: {
