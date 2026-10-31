@@ -325,22 +325,14 @@ export default function LandingScreen() {
         <div className="txt-header-inner" style={rawStyles.headerInner}>
           <div style={rawStyles.logoGroup}>
             <TxtLogo size={36} />
-            <span style={rawStyles.brandBadge}>OFFLINE SMS</span>
+            <span style={rawStyles.brandBadge}>Offline SMS</span>
           </div>
 
           <nav className="txt-nav-links" style={rawStyles.navLinks}>
-            <button onClick={() => scrollTo("demo")} style={rawStyles.navLink}>
-              DEMO
-            </button>
-            <button onClick={() => scrollTo("features")} style={rawStyles.navLink}>
-              FEATURES
-            </button>
-            <button onClick={() => scrollTo("architecture")} style={rawStyles.navLink}>
-              ZERO-SERVER
-            </button>
-            <button onClick={() => scrollTo("guide")} style={rawStyles.navLink}>
-              INSTALL GUIDE
-            </button>
+            <button onClick={() => scrollTo("demo")} style={rawStyles.navLink}>Demo</button>
+            <button onClick={() => scrollTo("features")} style={rawStyles.navLink}>Features</button>
+            <button onClick={() => scrollTo("architecture")} style={rawStyles.navLink}>Architecture</button>
+            <button onClick={() => scrollTo("guide")} style={rawStyles.navLink}>Install guide</button>
             <button
               onClick={() => router.push("/web")}
               style={{ ...rawStyles.navLink, color: siteColors.cyan }}
@@ -354,8 +346,8 @@ export default function LandingScreen() {
               className="txt-pixel-btn"
               style={rawStyles.starNavBtn}
             >
-              <PixelIcon name="star" size={12} color={siteColors.coral} />
-              <span>STAR ON GITHUB</span>
+              <PixelIcon name="star" size={12} color={siteColors.cyan} />
+              <span>Star on GitHub</span>
             </a>
           </nav>
 
@@ -365,7 +357,7 @@ export default function LandingScreen() {
             className="txt-pixel-btn"
             style={rawStyles.downloadNavBtn}
           >
-            DOWNLOAD APK
+            Download APK
           </a>
         </div>
       </header>
@@ -374,10 +366,6 @@ export default function LandingScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* HERO SECTION */}
         <section style={rawStyles.hero}>
-          <div style={rawStyles.pillStatus}>
-            <span style={rawStyles.pillDot}>●</span>
-            ZERO SERVERS · ZERO DATA PLAN · 100% CARRIER SMS
-          </div>
 
           <h1 style={rawStyles.heroTitle}>
             Send photos, QR codes, GPS, and UPI payments without internet.
@@ -396,7 +384,7 @@ export default function LandingScreen() {
               className="txt-pixel-btn"
               style={rawStyles.primaryCta}
             >
-              <span style={rawStyles.primaryCtaText}>DOWNLOAD LATEST APK ({apkVersion})</span>
+              <span style={rawStyles.primaryCtaText}>Download APK ({apkVersion})</span>
               <span style={rawStyles.primaryCtaSub}>Android 8.0+ · Sideload APK · Free & Open Source</span>
             </a>
 
@@ -405,7 +393,7 @@ export default function LandingScreen() {
               className="txt-pixel-btn"
               style={rawStyles.secondaryCta}
             >
-              INSTALLATION GUIDE ↓
+              Install guide ↓
             </button>
 
             <button
@@ -413,44 +401,33 @@ export default function LandingScreen() {
               className="txt-pixel-btn"
               style={rawStyles.ghostCta}
             >
-              WEB COMPANION (iOS) →
+              Web companion (iOS) →
             </button>
-
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="txt-pixel-btn"
-              style={rawStyles.starHeroBtn}
-            >
-              <PixelIcon name="star" size={14} color={siteColors.coral} />
-              <span>STAR ON GITHUB</span>
-            </a>
           </div>
 
           {/* Quick Specifications Strip */}
           <div style={rawStyles.specGrid}>
             <div style={rawStyles.specCard}>
               <div style={rawStyles.specValue}>0 KB</div>
-              <div style={rawStyles.specLabel}>SERVER FOOTPRINT</div>
+              <div style={rawStyles.specLabel}>Server footprint</div>
               <div style={rawStyles.specDesc}>No cloud database, AWS, Firebase, or external servers exist.</div>
             </div>
 
             <div style={rawStyles.specCard}>
               <div style={rawStyles.specValue}>100%</div>
-              <div style={rawStyles.specLabel}>ON-DEVICE SQLITE</div>
+              <div style={rawStyles.specLabel}>On-device SQLite</div>
               <div style={rawStyles.specDesc}>All transfers, requests, and contacts stay strictly on your phone.</div>
             </div>
 
             <div style={rawStyles.specCard}>
-              <div style={rawStyles.specValueCoral}>100/DAY</div>
-              <div style={rawStyles.specLabel}>BUILT-IN SAFETY CAP</div>
+              <div style={rawStyles.specValue}>100/day</div>
+              <div style={rawStyles.specLabel}>Built-in safety cap</div>
               <div style={rawStyles.specDesc}>Uses your SIM's existing SMS pack. Capped at 100/day to prevent carrier overages.</div>
             </div>
 
             <div style={rawStyles.specCard}>
               <div style={rawStyles.specValue}>MIT</div>
-              <div style={rawStyles.specLabel}>OPEN SOURCE</div>
+              <div style={rawStyles.specLabel}>Open source</div>
               <div style={rawStyles.specDesc}>Audit every line of Kotlin, React Native, and chunking logic on GitHub.</div>
             </div>
           </div>
@@ -474,23 +451,23 @@ export default function LandingScreen() {
             </div>
 
             <div style={rawStyles.demoInfo}>
-              <div style={rawStyles.sectionPre}>SEE TXT IN ACTION</div>
-              <h2 style={rawStyles.demoTitle}>Live Transmission Over Plain SMS</h2>
+              <div style={rawStyles.sectionPre}>See txt in action</div>
+              <h2 style={rawStyles.demoTitle}>Live transmission over plain SMS</h2>
               <p style={rawStyles.demoText}>
                 Watch txt scan a UPI QR code, slice the payload into GSM-7 SMS chunks, and reassemble it on a receiving phone in airplane mode. No cellular data, no Wi-Fi, and no server in between.
               </p>
               <div style={rawStyles.demoTags}>
                 <span style={rawStyles.demoTag}>
                   <PixelIcon name="check" size={13} color={siteColors.cyan} />
-                  ZERO DATA / AIRPLANE MODE
+                  Zero data / Airplane mode
                 </span>
                 <span style={rawStyles.demoTag}>
                   <PixelIcon name="check" size={13} color={siteColors.cyan} />
-                  GSM-7 SMS PROTOCOL
+                  GSM-7 SMS protocol
                 </span>
                 <span style={rawStyles.demoTag}>
                   <PixelIcon name="check" size={13} color={siteColors.cyan} />
-                  ON-DEVICE SQLITE & REASSEMBLY
+                  On-device SQLite & reassembly
                 </span>
               </div>
             </div>
@@ -500,7 +477,7 @@ export default function LandingScreen() {
         {/* ZERO-SERVER ARCHITECTURE & PRIVACY */}
         <section id="architecture" style={rawStyles.section}>
           <div style={rawStyles.sectionHeader}>
-            <div style={rawStyles.sectionPre}>SECURITY & PRIVACY GUARANTEE</div>
+            <div style={rawStyles.sectionPre}>Security & privacy guarantee</div>
             <h2 style={rawStyles.sectionTitle}>Zero Servers. Zero Telemetry. 100% Standalone.</h2>
             <p style={rawStyles.sectionSubtitle}>
               Traditional chat apps route every keystroke through remote server farms.
@@ -510,7 +487,7 @@ export default function LandingScreen() {
 
           <div style={rawStyles.archGrid}>
             <div style={rawStyles.archCard}>
-              <div style={rawStyles.archBadge}>NO REMOTE BACKEND</div>
+              <div style={rawStyles.archBadge}>No remote backend</div>
               <h3 style={rawStyles.archHeading}>There is no server running anywhere</h3>
               <p style={rawStyles.archText}>
                 txt does not have an API backend. There is no Node.js process, Python backend, Supabase cluster,
@@ -520,7 +497,7 @@ export default function LandingScreen() {
             </div>
 
             <div style={rawStyles.archCard}>
-              <div style={rawStyles.archBadge}>ZERO TELEMETRY</div>
+              <div style={rawStyles.archBadge}>Zero telemetry</div>
               <h3 style={rawStyles.archHeading}>We collect zero data of any sort</h3>
               <p style={rawStyles.archText}>
                 No analytics SDKs. No Facebook SDK. No Google Analytics. No Sentry crash reporting. No telemetry.
@@ -529,7 +506,7 @@ export default function LandingScreen() {
             </div>
 
             <div style={rawStyles.archCard}>
-              <div style={rawStyles.archBadge}>CARRIER RADIO</div>
+              <div style={rawStyles.archBadge}>Direct carrier radio</div>
               <h3 style={rawStyles.archHeading}>Direct phone-to-phone carrier SMS</h3>
               <p style={rawStyles.archText}>
                 Every transmission uses standard carrier telecom infrastructure. It works even during internet
@@ -538,7 +515,7 @@ export default function LandingScreen() {
             </div>
 
             <div style={rawStyles.archCard}>
-              <div style={rawStyles.archBadge}>NO FINANCIAL ACCESS</div>
+              <div style={rawStyles.archBadge}>No financial access</div>
               <h3 style={rawStyles.archHeading}>Never touches banking credentials</h3>
               <p style={rawStyles.archText}>
                 Payment requests are encoded as official NPCI UPI intent strings. txt never requests your UPI PIN,
@@ -551,7 +528,7 @@ export default function LandingScreen() {
         {/* CORE PROTOCOL FEATURES */}
         <section id="features" style={rawStyles.section}>
           <div style={rawStyles.sectionHeader}>
-            <div style={rawStyles.sectionPre}>WHAT TXT ENABLES</div>
+            <div style={rawStyles.sectionPre}>Capabilities</div>
             <h2 style={rawStyles.sectionTitle}>Engineered for zero-connectivity environments</h2>
           </div>
 
@@ -571,8 +548,8 @@ export default function LandingScreen() {
         {/* INSTALLATION & SECURITY SETUP GUIDE */}
         <section id="guide" style={rawStyles.section}>
           <div style={rawStyles.sectionHeader}>
-            <div style={rawStyles.sectionPre}>INSTALLATION MANUAL</div>
-            <h2 style={rawStyles.sectionTitle}>Step-by-Step Installation & Permission Setup</h2>
+            <div style={rawStyles.sectionPre}>Installation manual</div>
+            <h2 style={rawStyles.sectionTitle}>Step-by-step installation & permission setup</h2>
             <p style={rawStyles.sectionSubtitle}>
               Because txt communicates directly with cellular SMS hardware and reassembles incoming chunks in the
               background, Android and Google Play Protect require manual confirmation. Follow these 14 curated steps.
@@ -582,7 +559,7 @@ export default function LandingScreen() {
           {/* Sideloading Explainer Callouts */}
           <div style={rawStyles.explainerGrid}>
             <div style={rawStyles.explainerBox}>
-              <div style={rawStyles.explainerBadge}>WHY PAUSE PLAY PROTECT? (STEPS 1–7)</div>
+              <div style={rawStyles.explainerBadge}>Why pause Play Protect? (Steps 1–7)</div>
               <p style={rawStyles.explainerText}>
                 Google Play Protect automatically blocks sideloaded APKs requesting <code style={rawStyles.inlineCode}>SEND_SMS</code> and
                 background listener permissions that have not gone through Google's commercial Play Store signing pipeline.
@@ -592,7 +569,7 @@ export default function LandingScreen() {
             </div>
 
             <div id="guide-restricted" style={{ ...rawStyles.explainerBox, borderColor: siteColors.cyan }}>
-              <div style={{ ...rawStyles.explainerBadge, color: siteColors.cyan }}>WHY ALLOW RESTRICTED SETTINGS? (STEPS 9–12)</div>
+              <div style={{ ...rawStyles.explainerBadge, color: siteColors.cyan }}>Why allow Restricted Settings? (Steps 9–12)</div>
               <p style={rawStyles.explainerText}>
                 Android 13 introduced "Restricted Settings" to block sideloaded apps from turning on Notification
                 Listener access. Android shows: <em>"Restricted setting: For your security, this setting is currently unavailable."</em>
@@ -608,25 +585,25 @@ export default function LandingScreen() {
               onClick={() => setActivePhase("all")}
               style={activePhase === "all" ? rawStyles.tabActive : rawStyles.tab}
             >
-              ALL 14 STEPS
+              All 14 steps
             </button>
             <button
               onClick={() => setActivePhase("play-protect")}
               style={activePhase === "play-protect" ? rawStyles.tabActive : rawStyles.tab}
             >
-              1. PAUSE PLAY PROTECT (1–7)
+              1. Pause Play Protect (1–7)
             </button>
             <button
               onClick={() => setActivePhase("restricted")}
               style={activePhase === "restricted" ? rawStyles.tabActive : rawStyles.tab}
             >
-              2. RESTRICTED SETTINGS (9–12)
+              2. Restricted settings (9–12)
             </button>
             <button
               onClick={() => setActivePhase("permissions")}
               style={activePhase === "permissions" ? rawStyles.tabActive : rawStyles.tab}
             >
-              3. PERMISSIONS & READY (13–14)
+              3. Permissions & ready (13–14)
             </button>
           </div>
 
@@ -711,7 +688,7 @@ export default function LandingScreen() {
         {/* TECHNICAL FAQ */}
         <section style={rawStyles.section}>
           <div style={rawStyles.sectionHeader}>
-            <div style={rawStyles.sectionPre}>COMMON QUESTIONS</div>
+            <div style={rawStyles.sectionPre}>Common questions</div>
             <h2 style={rawStyles.sectionTitle}>Frequently Asked Questions</h2>
           </div>
 
@@ -767,7 +744,7 @@ export default function LandingScreen() {
                 className="txt-pixel-btn"
                 style={rawStyles.primaryCta}
               >
-                <span style={rawStyles.primaryCtaText}>DOWNLOAD LATEST APK ({apkVersion})</span>
+                <span style={rawStyles.primaryCtaText}>Download APK ({apkVersion})</span>
                 <span style={rawStyles.primaryCtaSub}>Direct APK Download · Zero Trackers</span>
               </a>
 
@@ -778,18 +755,7 @@ export default function LandingScreen() {
                 className="txt-pixel-btn"
                 style={rawStyles.secondaryCta}
               >
-                VIEW GITHUB RELEASES
-              </a>
-
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="txt-pixel-btn"
-                style={rawStyles.starHeroBtn}
-              >
-                <PixelIcon name="star" size={14} color={siteColors.coral} />
-                <span>STAR ON GITHUB</span>
+                View GitHub releases
               </a>
             </div>
 
@@ -1129,7 +1095,7 @@ const rawStyles = {
     width: "260px",
     borderRadius: "28px",
     border: `2px solid ${siteColors.cyan}`,
-    boxShadow: `0 0 28px rgba(5, 147, 198, 0.3), 0 16px 36px rgba(0, 0, 0, 0.75)`,
+    boxShadow: "0 16px 40px rgba(0, 0, 0, 0.75)",
     backgroundColor: "#02070A",
     overflow: "hidden",
     display: "flex",
